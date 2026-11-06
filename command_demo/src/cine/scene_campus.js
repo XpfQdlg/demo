@@ -51,28 +51,9 @@ function make_ground() {
   lawn.receiveShadow = true;
   g.add(lawn);
 
-  /* 数据包的地面贴图：铺装、绿化、水、森林的颜色都画在上面，
-     比统一草地更接近原图。贴一张与图幅等大的面，压在草地之上 */
-  const map_ground = new THREE.Mesh(
-    new THREE.PlaneGeometry(W * MPP, H * MPP),
-    new THREE.MeshStandardMaterial({
-      map: (() => {
-        const t = new THREE.TextureLoader().load(GROUND_URL);
-        /* 一张图铺满一平方公里，掠射角下会出摩尔纹横条，
-           各向异性过滤拉满可以压掉 */
-        t.anisotropy = 16;
-        t.colorSpace = THREE.SRGBColorSpace;
-        return t;
-      })(),
-      roughness: 0.95,
-    })
-  );
-  map_ground.rotation.x = -Math.PI / 2;
-  /* 抬高 12 厘米：与校园底盘、路面贴片共面会打架，
-     出现整片横条状闪烁，这个尺度上抬这么多看不出来 */
-  map_ground.position.y = 0.12;
-  map_ground.receiveShadow = true;
-  g.add(map_ground);
+  /* 地面贴图试过一版：一张图铺满一平方公里，掠射角下全是摩尔纹横条，
+     调各向异性也压不住。改回草地底盘，贴地要素（水、绿地、操场）仍由数据包的
+     贴地薄片提供颜色。 */
 
   return g;
 }
@@ -82,7 +63,8 @@ function make_roads(group) {
   const R = PACKAGE.roads;
   if (!R) return;
 
-  const road_mat = pbr("asphalt", { repeat: 1 / 4, normalScale: 1.3, envIntensity: 0.65 });
+  /* 沥青路面：压到接近黑，环境反射调低，否则整条路会泛白 */
+  const road_mat = pbr("asphalt", { repeat: 1 / 4, tint: 0x2a2b2d, normalScale: 1.3, envIntensity: 0.35 });
   const line_mat = new THREE.MeshStandardMaterial({ color: 0xe6e4dc, roughness: 0.82 });
 
   for (const s of R.surface) {
