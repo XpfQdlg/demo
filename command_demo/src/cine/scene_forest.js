@@ -1,19 +1,17 @@
 import * as THREE from "three";
 import { pbr, preload } from "../core/pbr.js";
-import { build_hill, scatter_hill_trees } from "../map/terrain.js";
 import { tree } from "./props.js";
 import { add_robots } from "./robots.js";
-import EXTRA from "../map/data/scene_extra.json";
 import PACKAGE from "../map/data/map_package.json";
 
 /* ══════════════════════════════════════════════════════════════════════════
-   scene_forest — 西山森林（观感版）
+   scene_forest — 林区（2026-11-06 换图后重写）
 
-   地形来自 scene_extra 的西山轮廓与山脊，用 terrain.js 的高度场生成：
-   山脚压平出巡检空地，坡面撒树。
+   新图里森林是三块实心色块，不可通行；数据包里另外给了一条林间道路
+   （forest_path），巡检设备沿它进林。
 
-   与联动演示的区别只在材质：那边用程序化草皮贴图，
-   这边用 AmbientCG 的草地材质，配合 8 段法线，斜光下坡面有起伏感。
+   上一版读 scene_extra 的西山轮廓与山脊，那套坐标只对旧图成立。
+   这里改成：森林地面铺深绿、树按轮廓撒、道路压在地面上。
    ══════════════════════════════════════════════════════════════════════════ */
 
 const MPP = PACKAGE.scale.meters_per_px;
@@ -21,135 +19,162 @@ const W = PACKAGE.image.width;
 const H = PACKAGE.image.height;
 const PW = (px, py) => [(px - W / 2) * MPP, (py - H / 2) * MPP];
 
+const to_world = (poly) => poly.map(([x, y]) => PW(x, y));
+
+function inside(poly, x, y) {
+  let c = false;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    const [xi, yi] = poly[i];
+    const [xj, yj] = poly[j];
+    if ((yi > y) !== (yj > y) && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) c = !c;
+  }
+  return c;
+}
+
 export async function build_forest(cine) {
   await preload(["grass", "wood", "rock"]);
-
-  const F = EXTRA.forest;
-  const hill = EXTRA.hills.find((h) => h.id === F?.hill_id);
 
   const root = new THREE.Group();
   root.name = "forest";
 
-  /* 底盘草地 */
+  const forests = PACKAGE.zones?.forest?.forests?.length
+    ? PACKAGE.zones.forest.forests
+    : [PACKAGE.zones?.forest?.polygon].filter(Boolean);
+
+  /* 底盘：整幅地面，颜色接近林下阴影 */
   const lawn = new THREE.Mesh(
-    new THREE.PlaneGeometry(1600, 1600),
-    /* 1600 / 400 = 4 米一张，与校园、小区同一尺度 */
-    pbr("grass", { repeat: 400, normalScale: 1.1, tint: 0x6f8a4a })
+    new THREE.PlaneGeometry(W * MPP + 400, H * MPP + 400),
+    pbr("grass", { repeat: 320, normalScale: 1.1, tint: 0x5c7440 })
   );
   lawn.rotation.x = -Math.PI / 2;
   lawn.receiveShadow = true;
   root.add(lawn);
 
-  if (!hill) {
-    root.userData.frame = { center: [0, 0], span: 200 };
-    return root;
-  }
-
-  /* 山体：高度场网格，材质换成 PBR 草皮 */
-  /* terrain.js 把 UV 按全图归一化，一张贴图占 1079 × 0.5 / 135 ≈ 4 米 */
-  const hillMat = pbr("grass", { repeat: 135, normalScale: 1.4, tint: 0x83a15c });
-  const mesh = build_hill(hill, {
-    seg: 72,
-    flatten: F ? [F.clearing] : [],
-    flatten_smooth: F ? F.flatten_smooth ?? 45 : 20,
-    material: hillMat,
-  });
-  root.add(mesh);
-
-  /* 坡面树：先按原有散点，再换成观感版的树 */
-  const spots = scatter_hill_trees(hill, mesh, { count: 420, seed: 31 });
-  if (spots) {
-    /* scatter_hill_trees 返回的是实例化网格，这里直接沿用——
-       它已经把树按三角形采样落在坡面上，位置是准的 */
-    root.add(spots);
-  }
-
-  /* 山脚空地：一片较亮的草地，与坡面区分开 */
-  if (F) {
-    const pts = F.clearing.map(([px, py]) => {
-      const [x, z] = PW(px, py);
-      return new THREE.Vector2(x, -z);
-    });
+  /* 森林地面：深绿贴片，压住底盘，边界一眼能认出来 */
+  for (const poly of forests) {
+    const pts = to_world(poly).map(([x, z]) => new THREE.Vector2(x, -z));
     const geo = new THREE.ShapeGeometry(new THREE.Shape(pts));
     geo.rotateX(-Math.PI / 2);
     const patch = new THREE.Mesh(
       geo,
-      /* 空地是 ShapeGeometry，UV 单位是米 */
-      pbr("grass", { repeat: 1 / 4, normalScale: 1.0, tint: 0x7f9a52 })
+      pbr("grass", { repeat: 1 / 4, normalScale: 1.2, tint: 0x4b6338 })
     );
-    patch.position.y = 0.06;
+    patch.position.y = 0.04;
     patch.receiveShadow = true;
     root.add(patch);
+  }
 
-    /* 空地边缘补几棵大乔木 */
-    const cx = F.clearing.reduce((a, p) => a + p[0], 0) / F.clearing.length;
-    const cy = F.clearing.reduce((a, p) => a + p[1], 0) / F.clearing.length;
-    for (let i = 0; i < 14; i++) {
-      const a = (i / 14) * Math.PI * 2;
-      const r = 26 + (i % 3) * 7;
-      const [x, z] = PW(cx + Math.cos(a) * r / MPP, cy + Math.sin(a) * r / MPP);
-      const t = tree({ h: 8 + (i % 4) * 0.9, seed: 700 + i, tone: i });
-      t.position.set(x, 0, z);
-      root.add(t);
+  /* 林间道路：数据包里给的折线，压在地面上 */
+  const path_pts = PACKAGE.forest_path?.points || [];
+  const path_poly = PACKAGE.forest_path?.polygon || [];
+  if (path_pts.length >= 2) {
+    const w = PACKAGE.forest_path.width_m || 6;
+    const left = [];
+    const right = [];
+    for (let i = 0; i < path_pts.length; i++) {
+      const p = path_pts[i];
+      const q = path_pts[Math.min(i + 1, path_pts.length - 1)];
+      const r = path_pts[Math.max(i - 1, 0)];
+      const dx = q[0] - r[0];
+      const dy = q[1] - r[1];
+      const len = Math.hypot(dx, dy) || 1;
+      const nx = -dy / len;
+      const ny = dx / len;
+      const half = w / 2 / MPP;
+      left.push(PW(p[0] + nx * half, p[1] + ny * half));
+      right.push(PW(p[0] - nx * half, p[1] - ny * half));
     }
+    const ring = [...left, ...right.reverse()].map(([x, z]) => new THREE.Vector2(x, -z));
+    const geo = new THREE.ShapeGeometry(new THREE.Shape(ring));
+    geo.rotateX(-Math.PI / 2);
+    const road = new THREE.Mesh(
+      geo,
+      pbr("concrete_floor", { repeat: 1 / 3, tint: 0x9b927f, normalScale: 1.0 })
+    );
+    road.position.y = 0.09;
+    road.receiveShadow = true;
+    root.add(road);
+  }
 
-    const [fcx, fcz] = PW(cx, cy);
-    root.userData.frame = { center: [fcx, fcz], span: 230 };
+  /* 树：撒在森林轮廓内，避开道路走廊 */
+  let seed = 99173;
+  const rnd = () => {
+    seed = (seed * 1664525 + 1013904223) >>> 0;
+    return seed / 4294967296;
+  };
+  const on_path = (px, py) => path_poly.length >= 3 && inside(path_poly, px, py);
 
-    /* 山脚空地上的设备：狗 2 台、人形 1 台，只在压平的空地里活动 */
-    add_robots(root, { scene: "forest", cine, dogs: 2, humans: 1, seed: 3305 });
-
-    /* 山脚林带：只在山上撒树，山就成了一块孤零零的绿馒头。
-       真实的山是与周围林地连成一片的，山脚下再铺一圈树，
-       边缘往平地上自然散开。位置用「到山心的距离」做筛选，
-       剔掉落在山体网格与空地里的点，其余直接铺在 y = 0。 */
-    const hxs = hill.polygon.map((p) => p[0]);
-    const hys = hill.polygon.map((p) => p[1]);
-    const hx0 = (Math.min(...hxs) - W / 2) * MPP;
-    const hx1 = (Math.max(...hxs) - W / 2) * MPP;
-    const hz0 = (Math.min(...hys) - H / 2) * MPP;
-    const hz1 = (Math.max(...hys) - H / 2) * MPP;
-    const hcx = (hx0 + hx1) / 2;
-    const hcz = (hz0 + hz1) / 2;
-    const hr = Math.max(hx1 - hx0, hz1 - hz0) * 0.62;
-
-    let acc = 99173;
-    const rnd = () => {
-      acc = (acc * 1664525 + 1013904223) >>> 0;
-      return acc / 4294967296;
-    };
-    const in_clearing = (x, z) =>
-      x > fcx - 24 && x < fcx + 24 && z > fcz - 22 && z < fcz + 22;
-
-    for (let i = 0; i < 520; i++) {
-      const a = rnd() * Math.PI * 2;
-      const r = hr * (0.55 + rnd() * 0.95);
-      const x = hcx + Math.cos(a) * r;
-      const z = hcz + Math.sin(a) * r;
-      if (in_clearing(x, z)) continue;
-      const t = tree({ h: 6 + rnd() * 5, seed: 5200 + i, tone: i });
+  for (const poly of forests) {
+    const xs = poly.map((p) => p[0]);
+    const ys = poly.map((p) => p[1]);
+    const x0 = Math.min(...xs);
+    const x1 = Math.max(...xs);
+    const y0 = Math.min(...ys);
+    const y1 = Math.max(...ys);
+    const area_ha = ((x1 - x0) * (y1 - y0) * MPP * MPP) / 10000;
+    const n = Math.min(900, Math.round(area_ha * 70));
+    let placed = 0;
+    for (let i = 0; i < n * 6 && placed < n; i++) {
+      const px = x0 + rnd() * (x1 - x0);
+      const py = y0 + rnd() * (y1 - y0);
+      if (!inside(poly, px, py)) continue;
+      if (on_path(px, py)) continue;
+      const [x, z] = PW(px, py);
+      const t = tree({ h: 7 + rnd() * 6, seed: 5200 + placed, tone: placed });
       t.position.set(x, 0, z);
       t.rotation.y = rnd() * Math.PI * 2;
       root.add(t);
+      placed++;
     }
+  }
 
-    /* 几块石头：林地里裸露的基岩，能压住「纯草坪」的平铺感 */
-    const rockMat = pbr("rock", { repeat: 2, normalScale: 1.6, tint: 0x8b877d });
-    for (let i = 0; i < 26; i++) {
-      const a = rnd() * Math.PI * 2;
-      const r = hr * (0.3 + rnd() * 0.9);
-      const s = 0.7 + rnd() * 1.9;
-      const rock = new THREE.Mesh(new THREE.IcosahedronGeometry(s, 0), rockMat);
-      rock.position.set(hcx + Math.cos(a) * r, s * 0.35, hcz + Math.sin(a) * r);
-      rock.rotation.set(rnd() * 3, rnd() * 3, rnd() * 3);
-      rock.scale.y = 0.55 + rnd() * 0.4;
-      rock.castShadow = true;
-      rock.receiveShadow = true;
-      root.add(rock);
-    }
+  /* 石头：林下裸露的基岩 */
+  const rockMat = pbr("rock", { repeat: 2, normalScale: 1.6, tint: 0x8b877d });
+  for (let i = 0; i < 30; i++) {
+    const poly = forests[(i * 7) % forests.length];
+    if (!poly) break;
+    const xs = poly.map((p) => p[0]);
+    const ys = poly.map((p) => p[1]);
+    const px = Math.min(...xs) + rnd() * (Math.max(...xs) - Math.min(...xs));
+    const py = Math.min(...ys) + rnd() * (Math.max(...ys) - Math.min(...ys));
+    if (!inside(poly, px, py) || on_path(px, py)) continue;
+    const [x, z] = PW(px, py);
+    const s = 0.7 + rnd() * 1.6;
+    const rock = new THREE.Mesh(new THREE.IcosahedronGeometry(s, 0), rockMat);
+    rock.position.set(x, s * 0.3, z);
+    rock.rotation.set(rnd() * 3, rnd() * 3, rnd() * 3);
+    rock.scale.y = 0.55 + rnd() * 0.4;
+    rock.castShadow = true;
+    root.add(rock);
+  }
+
+  /* 取景：围住整片林子 */
+  if (forests.length) {
+    const all = forests.flat();
+    const xs = to_world(all).map((p) => p[0]);
+    const zs = to_world(all).map((p) => p[1]);
+    root.userData.frame = {
+      center: [(Math.min(...xs) + Math.max(...xs)) / 2, (Math.min(...zs) + Math.max(...zs)) / 2],
+      span: Math.max(Math.max(...xs) - Math.min(...xs), Math.max(...zs) - Math.min(...zs)) + 40,
+    };
   } else {
     root.userData.frame = { center: [0, 0], span: 300 };
   }
+
+  /* 设备沿林间道路巡检 */
+  const p0 = path_pts.length ? path_pts[Math.floor(path_pts.length / 2)] : null;
+  const pc = forests.length
+    ? forests[0].reduce((a, p) => [a[0] + p[0] / forests[0].length, a[1] + p[1] / forests[0].length], [0, 0])
+    : [W / 2, H / 2];
+  add_robots(root, {
+    scene: "forest",
+    cine,
+    dogs: 2,
+    humans: 1,
+    seed: 3305,
+    center_px: p0 || pc,
+    radius_px: 260,
+  });
 
   return root;
 }

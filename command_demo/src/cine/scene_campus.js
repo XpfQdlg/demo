@@ -7,6 +7,7 @@ import { add_community } from "./scene_community.js";
 import { add_robots } from "./robots.js";
 import { slabify } from "./rectify.js";
 import PACKAGE from "../map/data/map_package.json";
+import GROUND_URL from "../map/data/ground.png";
 
 /* ══════════════════════════════════════════════════════════════════════════
    scene_campus — 整个校园（观感版）
@@ -49,6 +50,29 @@ function make_ground() {
   lawn.rotation.x = -Math.PI / 2;
   lawn.receiveShadow = true;
   g.add(lawn);
+
+  /* 数据包的地面贴图：铺装、绿化、水、森林的颜色都画在上面，
+     比统一草地更接近原图。贴一张与图幅等大的面，压在草地之上 */
+  const map_ground = new THREE.Mesh(
+    new THREE.PlaneGeometry(W * MPP, H * MPP),
+    new THREE.MeshStandardMaterial({
+      map: (() => {
+        const t = new THREE.TextureLoader().load(GROUND_URL);
+        /* 一张图铺满一平方公里，掠射角下会出摩尔纹横条，
+           各向异性过滤拉满可以压掉 */
+        t.anisotropy = 16;
+        t.colorSpace = THREE.SRGBColorSpace;
+        return t;
+      })(),
+      roughness: 0.95,
+    })
+  );
+  map_ground.rotation.x = -Math.PI / 2;
+  /* 抬高 12 厘米：与校园底盘、路面贴片共面会打架，
+     出现整片横条状闪烁，这个尺度上抬这么多看不出来 */
+  map_ground.position.y = 0.12;
+  map_ground.receiveShadow = true;
+  g.add(map_ground);
 
   return g;
 }
@@ -273,42 +297,14 @@ export async function build_campus(cine) {
     root.add(fence);
   }
 
-  /* 小山：东北与西各一座，放在校园轮廓之外。
-     坐标故意取在图纸范围外——场景地面有 2600 米，容得下。 */
-  /* 山头高度按「从六百米外一眼能看出是山」来定：
-     二十多米的小丘在这个尺度上只剩一道浅影，四五十米才有轮廓。 */
-  const SMALL_HILLS = [
-    {
-      id: "ne-hill",
-      polygon: [[700, -330], [960, -400], [1210, -170], [1190, 140], [980, 265], [755, 205]],
-      ridge: [[800, -230], [1000, -110], [1130, 60]],
-      peak_m: 48,
-      roughness: 0.42,
-    },
-    {
-      id: "w-hill",
-      polygon: [[-430, 510], [-180, 465], [30, 640], [10, 945], [-185, 1045], [-435, 930]],
-      ridge: [[-290, 680], [-120, 760], [-20, 850]],
-      peak_m: 42,
-      roughness: 0.38,
-    },
-  ];
-  /* 山体的 UV 由 terrain.js 按全图归一化（px / 图宽），
-     所以一张贴图占的米数是 图宽 × 比例尺 / repeat，
-     1079 × 0.5 / 135 ≈ 4 米，和地面草地同尺度。 */
-  const hillMat = pbr("grass", { repeat: 135, normalScale: 1.3, tint: 0x7d9757 });
-  for (const h of SMALL_HILLS) {
-    const mesh = build_hill(h, { seg: 64, material: hillMat });
-    root.add(mesh);
-    const trees = scatter_hill_trees(h, mesh, { count: 320, seed: h.id.length * 17 });
-    if (trees) root.add(trees);
-  }
+  /* 旧的东北、西侧两座小山是手写在世界坐标里的，只对旧图成立。
+     新图的森林由数据包描述，这里不再摆额外的山。 */
 
   /* 东边紧挨着的小区：和「小区」页签是同一份数据、同一个函数，
      两处看到的楼一模一样，切换场景只是换了机位。 */
   /* 小区自带两台狗、一台人形：小区页签跟随的是这三台，
      而不是三百米外的校园设备 */
-  add_community(root, { distant: false, packageBuildings: false, robots: true, cine });
+  add_community(root, { robots: true, cine, wall: true });
 
   /* 远景体量 */
   add_distant_town(root, { center: [0, 0], count: 70, seed: 20261114, rMin: 420, rMax: 720 });

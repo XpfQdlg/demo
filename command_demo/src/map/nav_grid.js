@@ -15,9 +15,11 @@ import EXTRA from "./data/scene_extra.json";
    参数一改网格就得跟着改；在 JS 里现场生成，改数据包就能立刻生效。
    ══════════════════════════════════════════════════════════════════════════ */
 
-const DIV = 4;                     // 每格 4 像素 = 2 米
-const W = Math.ceil(MAP.width_px / DIV);
-const H = Math.ceil(MAP.height_px / DIV);
+/* 网格尺寸跟着数据包走：不同地图的图幅与格宽可以不一样，
+   写死 4 像素的话换一张图就整体错位，掩膜会读到别的格子上 */
+const DIV = PACKAGE.walk_mask?.div || 4;   // 默认每格 4 像素
+const W = PACKAGE.walk_mask?.width || Math.ceil(MAP.width_px / DIV);
+const H = PACKAGE.walk_mask?.height || Math.ceil(MAP.height_px / DIV);
 
 /**
  * 扫描线填充一个多边形到网格。
@@ -197,28 +199,38 @@ function campus_road() {
   return new NavGrid(out);
 }
 
-/** 小区全体：轮廓内，挖掉建筑（外扩 2 米） */
+/**
+ * 小区与森林都直接取数据包了。
+ * 换图后 scene_extra 里那套旧小区参数（环路、四栋板楼、车棚）已经对不上，
+ * 再读它会把导航格铺到别的位置去。
+ */
+
+/** 小区全体：轮廓内，挖掉楼（外扩 2 米） */
 function community_all() {
   const mask = new Uint8Array(W * H);
-  const C = EXTRA.community;
   const zone = PACKAGE.zones.community.polygon;
   fill_polygon(mask, zone, 1);
-  for (const b of C.buildings || []) {
-    fill_polygon(mask, expand_polygon(b.polygon, 2.0), 0);
+  for (const b of PACKAGE.buildings || []) {
+    if (b.height_m <= 0.01) continue;
+    fill_polygon(mask, expand_polygon(b.polygon, 2.0 / MAP.meters_per_px), 0);
   }
-  if (C.shed && C.shed.polygon) fill_polygon(mask, expand_polygon(C.shed.polygon, 1.5), 0);
   return new NavGrid(mask);
 }
 
-/** 小区道路：环路 + 中轴，人形机器人走这套 */
+/** 小区道路：人形机器人只走路面 */
 function community_road() {
   const mask = new Uint8Array(W * H);
-  const C = EXTRA.community;
-  for (const r of C.roads || []) {
-    const poly = ribbon_polygon(r.points, r.width_m + 1.0, r.closed);
-    fill_polygon(mask, poly, 1);
+  const zone = PACKAGE.zones.community.polygon;
+  for (const s of PACKAGE.roads?.surface || []) {
+    fill_polygon(mask, s.outer, 1);
+    for (const h of s.holes || []) fill_polygon(mask, h, 0);
   }
-  return new NavGrid(mask);
+  /* 限制在小区范围内 */
+  const out = new Uint8Array(W * H);
+  const inside = new Uint8Array(W * H);
+  fill_polygon(inside, zone, 1);
+  for (let i = 0; i < out.length; i++) out[i] = mask[i] & inside[i];
+  return new NavGrid(out);
 }
 
 /** 地铁站台：只有站台面可走，轨道不行 */
@@ -242,11 +254,12 @@ function subway_platform() {
   return new NavGrid(mask);
 }
 
-/** 森林空地：巡检场地范围内都可走，山上不行 */
+/** 森林：新图里森林是实心山体，只留一条林间道路可走 */
 function forest_clearing() {
   const mask = new Uint8Array(W * H);
-  const F = EXTRA.forest;
-  const poly = F ? F.clearing : PACKAGE.zones.forest.polygon;
+  const poly = PACKAGE.forest_path?.polygon?.length
+    ? PACKAGE.forest_path.polygon
+    : PACKAGE.zones?.forest?.polygon;
   fill_polygon(mask, poly, 1);
   return new NavGrid(mask);
 }

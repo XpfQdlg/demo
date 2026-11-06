@@ -9,6 +9,7 @@ import { build_subway } from "./cine/scene_subway.js";
 import { build_forest } from "./cine/scene_forest.js";
 import { Monitor } from "./cine/monitor.js";
 import { px_to_world, world_to_px } from "./map/coords.js";
+import PACKAGE from "./map/data/map_package.json";
 
 /* 观感版预览页：两个场景可切换，无 UI 遮挡，只用来验证画质。
    素材：AmbientCG 材质 + Poly Haven 天空，均 CC0。 */
@@ -26,24 +27,46 @@ const tabs = document.querySelectorAll("[data-scene]");
 /* 每个场景的机位：
    相机目标由场景包围盒自动算，距离按场地尺度缩放。
    小区在图纸上的位置不在原点，写死坐标会对着一片空地。 */
+/* 机位的中心与跨度按数据包里的区域轮廓算，换图不用改这里。
+   只有角度、仰角、取景系数与雾距是看画面定的。 */
+const MAP_W = PACKAGE.image.width;
+const MAP_H = PACKAGE.image.height;
+const MPP = PACKAGE.scale.meters_per_px;
+
+function bbox_of(polys) {
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  for (const poly of polys) {
+    for (const [x, y] of poly) {
+      if (x < x0) x0 = x;
+      if (y < y0) y0 = y;
+      if (x > x1) x1 = x;
+      if (y > y1) y1 = y;
+    }
+  }
+  return { x0, y0, x1, y1 };
+}
+
+function view_of(polys, extra) {
+  const b = bbox_of(polys);
+  if (!isFinite(b.x0)) return { ...extra };
+  return {
+    center: [((b.x0 + b.x1) / 2 - MAP_W / 2) * MPP, ((b.y0 + b.y1) / 2 - MAP_H / 2) * MPP],
+    span: Math.max(b.x1 - b.x0, b.y1 - b.y0) * MPP,
+    ...extra,
+  };
+}
+
+const CAMPUS_POLY = PACKAGE.zones?.campus?.polygon || [];
+const COMM_POLY = PACKAGE.zones?.community?.polygon || [];
+const FOREST_POLYS = PACKAGE.zones?.forest?.forests?.length
+  ? PACKAGE.zones.forest.forests
+  : [PACKAGE.zones?.forest?.polygon].filter(Boolean);
+
 const VIEWS = {
-  /* 校园场景机位在五百多米外，雾从 380 起会让主体楼群一开始就发灰。
-     把起雾距离推到 650，近处保持锐利，远处的体量仍靠雾化淡出。 */
-  /* 默认就是 3D 俯视：抬到接近垂直，一眼看全场地，替代原来的 2D 指挥图。
-     phi 是仰角，π/2 为正上方；1.02 弧度约 58°，保留一点立体感，楼还有高度。 */
-  /* theta 转 90°：校园总平面是南北长的竖图，横过来才填满 16:9 的屏幕 */
-  campus:    { theta: 5.29, phi: 1.02, fit: 0.89, fog: [650, 1500], env: 0.55 },
-  /* 小区与校园是同一块地：场景用同一个 builder，只是机位换到东南角。
-     小区范围在像素 x 799~1007、y 1048~1255，中心约 (903, 1151)。 */
-  community: {
-    theta: 0.95, phi: 1.00, fit: 1.05, fog: [300, 900], env: 0.58,
-    center: [181.8, 187.3], span: 150,
-  },
-  forest:    { theta: 0.85, phi: 0.34, fit: 1.15, fog: [120, 520], env: 0.6 },
-  /* 站厅是 185 × 47 米的封闭盒子，机位必须落在里面。
-     theta = π/2 让相机沿长轴（东西向）后退，phi 压到 0.02
-     使相机高度留在地面与 6 米顶棚之间。 */
-  subway:    { theta: 1.5708, phi: 0.02, fit: 0.34, fog: [110, 420], env: 0.55 },
+  campus: view_of([CAMPUS_POLY], { theta: 5.29, phi: 1.02, fit: 0.95, fog: [900, 2400], env: 0.55 }),
+  community: view_of([COMM_POLY], { theta: 0.95, phi: 1.00, fit: 1.1, fog: [420, 1300], env: 0.58 }),
+  forest: view_of(FOREST_POLYS, { theta: 0.85, phi: 0.72, fit: 1.15, fog: [260, 1100], env: 0.6 }),
+  subway: { theta: 1.5708, phi: 0.02, fit: 0.34, fog: [110, 420], env: 0.55 },
 };
 
 /* 小区页签不再单独建场景：它就在校园东南角，是同一块地上的一部分。
@@ -73,8 +96,12 @@ function collect_agents(root, scene_id) {
 /* 小区页签复用校园场景，监控点位要限制在小区范围内，
    否则讲解到小区时画面里一个报警点都没有。
    小区范围在像素 x 799~1007、y 1048~1255，取中心与半径。 */
+const COMM_BOX = bbox_of([COMM_POLY]);
 const MONITOR_AREA = {
-  community: { center_px: [903, 1151], radius_px: 120 },
+  community: {
+    center_px: [(COMM_BOX.x0 + COMM_BOX.x1) / 2, (COMM_BOX.y0 + COMM_BOX.y1) / 2],
+    radius_px: Math.max(COMM_BOX.x1 - COMM_BOX.x0, COMM_BOX.y1 - COMM_BOX.y0) * 0.45,
+  },
 };
 
 /** 建监控层。tab 是页签名，root 是当前场景根节点，list 是本页签的设备 */
