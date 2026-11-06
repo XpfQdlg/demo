@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<link rel="icon" href="./favicon.svg" type="image/svg+xml" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>校园中枢 · 观感版</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: #0b0e12; }
+  #stage { position: fixed; inset: 0; }
+  #stage canvas { display: block; }
+
+  #hud {
+    position: fixed; inset: 0; display: grid; place-items: center;
+    color: #cfd8e3; font: 15px/1.6 "Microsoft YaHei", system-ui, sans-serif;
+    letter-spacing: .08em;
+  }
+  #hud .ring {
+    width: 34px; height: 34px; border-radius: 50%;
+    border: 2px solid rgba(150, 200, 255, .22);
+    border-top-color: #7fb4ff;
+    animation: spin 900ms linear infinite;
+    margin: 0 auto 16px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  #tip {
+    position: fixed; left: 24px; bottom: 20px;
+    color: rgba(210, 224, 240, .5);
+    font: 12px/1.7 "Microsoft YaHei", system-ui, sans-serif;
+    letter-spacing: .06em; opacity: 0; transition: opacity .8s ease .4s;
+    pointer-events: none;
+  }
+  #tip b { color: rgba(160, 200, 245, .8); font-weight: 500; }
+
+  #tabs {
+    position: fixed; left: 50%; top: 22px; transform: translateX(-50%);
+    display: flex; gap: 2px; padding: 4px;
+    background: rgba(10, 16, 24, .55);
+    border: 1px solid rgba(140, 180, 220, .16);
+    border-radius: 10px; backdrop-filter: blur(8px);
+    z-index: 10;
+    pointer-events: none;   /* 容器不拦指针，拖拽经过顶栏也能转视角 */
+  }
+  .tab {
+    pointer-events: auto;
+    padding: 7px 18px; border: 0; border-radius: 7px; cursor: pointer;
+    background: transparent; color: rgba(200, 216, 232, .68);
+    font: 13px/1 "Microsoft YaHei", system-ui, sans-serif;
+    letter-spacing: .06em; transition: background .18s, color .18s;
+  }
+  .tab:hover { color: #dceaf8; }
+  .tab.on { background: rgba(90, 140, 200, .28); color: #eaf4ff; }
+
+  #quality {
+    position: fixed; right: 22px; top: 22px;
+    display: flex; align-items: center; gap: 2px; padding: 4px;
+    background: rgba(10, 16, 24, .55);
+    border: 1px solid rgba(140, 180, 220, .16);
+    border-radius: 10px; backdrop-filter: blur(8px);
+    z-index: 10;
+    pointer-events: none;
+  }
+  .q {
+    pointer-events: auto;
+    padding: 6px 12px; border: 0; border-radius: 6px; cursor: pointer;
+    background: transparent; color: rgba(200, 216, 232, .62);
+    font: 12px/1 "Microsoft YaHei", system-ui, sans-serif;
+    transition: background .18s, color .18s;
+  }
+  .q:hover { color: #dceaf8; }
+  .q.on { background: rgba(90, 140, 200, .28); color: #eaf4ff; }
+  #fps {
+    margin: 0 8px 0 10px; min-width: 56px; text-align: right;
+    font: 11px/1 ui-monospace, Consolas, monospace;
+    color: rgba(160, 200, 245, .62);
+  }
+
+  /* 右上角小窗：第一人称机器视角。主画面是第三人称跟随，这里补上「机器自己看到什么」 */
+  #pipbox {
+    position: fixed; right: 22px; top: 74px; width: 336px;
+    background: rgba(10, 16, 24, .6);
+    border: 1px solid rgba(140, 180, 220, .28);
+    border-radius: 10px; overflow: hidden;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, .45);
+    backdrop-filter: blur(6px);
+    display: none; z-index: 9;
+  }
+  #pipbox.on { display: block; }
+  #pip { display: block; width: 100%; height: 189px; }
+  #pipbar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 6px 10px;
+    font: 11px/1 "Microsoft YaHei", system-ui, sans-serif;
+    color: rgba(190, 214, 240, .7); letter-spacing: .05em;
+  }
+  #pipbar b { color: #d9ecff; font-weight: 500; }
+
+  /* 发现播报：跟随视角下用消息条，全局视角用头顶气泡 */
+  #toast {
+    position: fixed; left: 50%; bottom: 84px; transform: translateX(-50%) translateY(10px);
+    padding: 10px 20px; border-radius: 10px;
+    background: rgba(58, 20, 16, .88);
+    border: 1px solid rgba(255, 138, 92, .55);
+    color: #ffd9c2;
+    font: 14px/1.5 "Microsoft YaHei", system-ui, sans-serif;
+    letter-spacing: .06em; white-space: nowrap;
+    opacity: 0; pointer-events: none;
+    transition: opacity .25s ease, transform .25s ease;
+    z-index: 12;
+  }
+  #toast.on { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  #credit {
+    position: fixed; right: 24px; bottom: 20px;
+    color: rgba(160, 180, 200, .34);
+    font: 11px/1.6 "Microsoft YaHei", system-ui, sans-serif;
+    letter-spacing: .04em; pointer-events: none;
+  }
+
+  /* 讲解用的两块面板：左侧执行体、右下事件流。
+     和顶栏同一套底：深色半透明 + 细边框 + 背景模糊，不抢画面的注意力。 */
+  #agents, #feed {
+    position: fixed; z-index: 9;
+    padding: 8px 10px 10px;
+    background: rgba(10, 16, 24, .55);
+    border: 1px solid rgba(140, 180, 220, .16);
+    border-radius: 10px; backdrop-filter: blur(8px);
+    font: 12px/1.5 "Microsoft YaHei", system-ui, sans-serif;
+    color: rgba(200, 216, 232, .72);
+  }
+  #agents { left: 22px; top: 74px; width: 206px; }
+  #feed { right: 22px; bottom: 42px; width: 330px; }
+  .panel-h {
+    display: flex; align-items: baseline; justify-content: space-between;
+    padding-bottom: 6px; margin-bottom: 5px;
+    border-bottom: 1px solid rgba(140, 180, 220, .12);
+    font-size: 11px; letter-spacing: .08em; color: rgba(150, 190, 235, .72);
+  }
+  .panel-h span { color: rgba(160, 190, 225, .45); }
+
+  .agent-row {
+    display: flex; align-items: center; gap: 8px; width: 100%;
+    padding: 5px 7px; border: 0; border-radius: 6px;
+    background: transparent; color: inherit;
+    font: inherit; text-align: left; cursor: pointer;
+    transition: background .15s, color .15s;
+  }
+  .agent-row:hover { background: rgba(90, 140, 200, .16); }
+  .agent-row.on { background: rgba(90, 140, 200, .3); color: #eaf4ff; }
+  .agent-row .dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: #43e0ff; box-shadow: 0 0 7px rgba(67, 224, 255, .8);
+    flex: none;
+  }
+  .agent-row.task .dot {
+    background: #ff9a4a; box-shadow: 0 0 8px rgba(255, 154, 74, .9);
+  }
+  .agent-row .name { flex: 1; letter-spacing: .04em; }
+  .agent-row .st { font-size: 11px; opacity: .7; }
+
+  .feed-row {
+    padding: 3px 2px; font-size: 12px;
+    border-bottom: 1px dashed rgba(140, 180, 220, .08);
+  }
+  .feed-row:last-child { border-bottom: 0; }
+  .feed-row .t {
+    margin-right: 7px; color: rgba(150, 190, 235, .55);
+    font-variant-numeric: tabular-nums;
+  }
+  .feed-row.warn { color: #ffd9c2; }
+  .feed-row.ok { color: #bdffd8; }
+
+  /* H 键：把面板收起来，只剩画面，接大屏时用 */
+  body.clean #agents, body.clean #feed, body.clean #tip { display: none; }
+</style>
+</head>
+<body>
+  <div id="stage"></div>
+  <div id="hud"><div><div class="ring"></div>正在载入环境光…</div></div>
+  <div id="tabs">
+    <button class="tab on" data-scene="campus" type="button">校园</button>
+    <button class="tab" data-scene="community" type="button">小区</button>
+    <button class="tab" data-scene="forest" type="button">森林</button>
+    <button class="tab" data-scene="subway" type="button">地铁</button>
+  </div>
+
+  <div id="quality">
+    <button class="q" data-q="low" type="button">低</button>
+    <button class="q" data-q="medium" type="button">中</button>
+    <button class="q" data-q="high" type="button">高</button>
+    <span id="fps">— fps</span>
+    <button class="q" id="reset" type="button" title="重置视角（或按 R）">⟳</button>
+  </div>
+  <div id="pipbox">
+    <canvas id="pip" width="672" height="378"></canvas>
+    <div id="pipbar"><span>第一人称 · <b id="pipwho">机器狗</b></span><span>空格 关闭小窗</span></div>
+  </div>
+  <div id="agents">
+    <div class="panel-h">执行体 <span id="agentCount">—</span></div>
+    <div id="agentRows"></div>
+  </div>
+  <div id="feed">
+    <div class="panel-h">事件流 <span>点击地面派单</span></div>
+    <div id="feedRows"></div>
+  </div>
+
+  <div id="toast"></div>
+  <div id="tip">拖动环绕 · 滚轮推拉 · <b>点击地面</b>派单 · <b>1–9</b> 跟随设备 · <b>G</b> 回到全局 · <b>H</b> 收起面板</div>
+  <div id="credit">材质 AmbientCG · 天空 Poly Haven · 均为 CC0</div>
+  <script type="module" src="./src/cinematic_main.js"></script>
+</body>
+</html>

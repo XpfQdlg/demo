@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>视觉巡检能力全景</title>
+  <meta name="description" content="森林、小区、校园、地铁四场景视觉巡检能力展示">
+  <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+
+  <header class="topbar">
+    <a class="brand" href="#/">
+      <span class="brand-mark" aria-hidden="true"></span>
+      <span class="brand-text">
+        <strong id="brand-name">视觉巡检</strong>
+        <span class="brand-sub">CAPABILITY MAP</span>
+      </span>
+    </a>
+
+    <nav class="nav" aria-label="主导航">
+      <a href="#/" data-nav="overview">总览</a>
+      <a href="#/scene/forest" data-nav="forest">森林</a>
+      <a href="#/scene/community" data-nav="community">小区</a>
+      <a href="#/scene/campus" data-nav="campus">校园</a>
+      <a href="#/scene/metro" data-nav="metro">地铁</a>
+      <a href="#/matrix" data-nav="matrix">能力矩阵</a>
+      <a href="#/roadmap" data-nav="roadmap">技术路线</a>
+      <a href="#/live" data-nav="live">实时演示</a>
+    </nav>
+
+    <button class="btn btn-ghost" id="kiosk-entry" type="button">
+      轮播模式
+    </button>
+  </header>
+
+  <main id="app" class="app" tabindex="-1"></main>
+
+  <!-- 轮播模式：大屏无人值守 -->
+  <div id="kiosk" class="kiosk" hidden>
+    <div class="kiosk-slide" id="kiosk-slide"></div>
+    <div class="kiosk-progress"><span id="kiosk-progress-bar"></span></div>
+    <div class="kiosk-hint">
+      <span id="kiosk-counter">1 / 8</span>
+      <span>← → 手动切换 · Esc 退出</span>
+    </div>
+  </div>
+
+  <script src="assets/js/data.js"></script>
+  <script src="assets/js/media.js"></script>
+  <script src="assets/js/app.js"></script>
+</body>
+</html>

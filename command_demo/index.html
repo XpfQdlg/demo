@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+<link rel="icon" href="./favicon.svg" type="image/svg+xml" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>智慧巡检联动指挥演示</title>
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230b1220'/%3E%3Ccircle cx='32' cy='32' r='11' fill='none' stroke='%2338e1ff' stroke-width='4'/%3E%3Ccircle cx='32' cy='32' r='3' fill='%2338e1ff'/%3E%3C/svg%3E"
+    />
+  </head>
+  <body>
+    <div id="stage"></div>
+
+    <!-- 第一人称取景框 -->
+    <div id="reticle" aria-hidden="true">
+      <span class="r-corner tl"></span>
+      <span class="r-corner tr"></span>
+      <span class="r-corner bl"></span>
+      <span class="r-corner br"></span>
+      <span class="r-cross"></span>
+    </div>
+
+    <div id="ui">
+      <header id="topbar">
+        <div class="brand">
+          <b>智慧巡检联动指挥演示</b>
+          <span>演示原型 · 场景与数据为模拟</span>
+        </div>
+
+        <nav id="sceneTabs" class="scene-tabs" aria-label="场景切换">
+          <button class="tab" data-scene="forest">森林</button>
+          <button class="tab" data-scene="community">小区</button>
+          <button class="tab" data-scene="campus">校园</button>
+          <button class="tab" data-scene="subway">地铁</button>
+        </nav>
+
+        <div class="top-right">
+          <button class="alert-banner" id="alertBanner" type="button" title="点击查看该事件"></button>
+          <div class="scenario-bar" id="scenarioBar"></div>
+          <button id="btnKiosk" class="btn ghost" type="button">轮播</button>
+          <button id="btnOverview" class="btn ghost" type="button">俯瞰</button>
+        </div>
+      </header>
+
+      <!-- 左侧：2D 指挥图由 minimap.js 注入 -->
+      <div id="minimapSlot"></div>
+
+      <!-- 右侧：执行体与识别卡片 -->
+      <aside id="agentPanel" class="agent-panel">
+        <div class="panel-head">
+          <b>执行体</b>
+          <span id="agentCount">—</span>
+        </div>
+        <div id="agentList" class="agent-list"></div>
+
+        <div class="det-card" id="detCard">
+          <div class="det-empty" id="detEmpty">选择设备或触发告警后显示识别结果</div>
+        </div>
+
+        <div class="panel-foot">
+          <span><kbd>1</kbd>–<kbd>9</kbd> 切换执行体 · <kbd>V</kbd> 视角 · <kbd>M</kbd> 指挥图</span>
+        </div>
+      </aside>
+
+      <!-- 底部：事件流 -->
+      <section id="evtFeed" class="evt-feed">
+        <div class="ef-head">
+          <b>事件流</b>
+          <button id="efClear" class="btn tiny" type="button">清空</button>
+        </div>
+        <div id="efBody" class="ef-body"></div>
+      </section>
+
+      <footer id="statusbar" class="statusbar">
+        <span id="statusAgent">—</span>
+        <span id="statusMode">—</span>
+        <span id="statusFps">—</span>
+      </footer>
+    </div>
+
+    <div id="boot" class="boot">
+      <div class="boot-inner">
+        <span class="spin"></span>
+        <span>正在构建场景…</span>
+      </div>
+    </div>
+
+    <script type="module" src="./src/main.js"></script>
+  </body>
+</html>
