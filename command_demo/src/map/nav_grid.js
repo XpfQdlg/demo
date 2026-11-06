@@ -247,7 +247,9 @@ function subway_platform() {
   const plat_len = hall_w - 12;
   const plat_w = S ? S.platform.width_m : 12;
   const hl = plat_len / 2 / MAP.meters_per_px - 1.5; // 两端各留 3 米
-  const hw = plat_w / 2 / MAP.meters_per_px - 1.0;   // 两侧各留 2 米，不贴黄线
+    /* 留 2 米。收窄到 4 米时站台只有 8 米宽，spread_spots 凑不出开阔点，
+     设备与摄像头会整组消失——宁可人贴边，也不能让人和机器都没了 */
+  const hw = plat_w / 2 / MAP.meters_per_px - 1.0;
   fill_polygon(mask, [
     [cx - hl, cy - hw], [cx + hl, cy - hw], [cx + hl, cy + hw], [cx - hl, cy + hw],
   ], 1);

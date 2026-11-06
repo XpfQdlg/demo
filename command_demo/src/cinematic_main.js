@@ -233,7 +233,17 @@ async function show(name) {
   const floor_y = agents[0]?.entity.root.position.y ?? 0;
 
   const people_n = { campus: 18, community: 12, forest: 1, subway: 12 }[name] ?? 10;
-  add_people(root, { scene_id: name, count: people_n, seed: 1106, floor_y });
+  /* 地铁站台只有十几米宽，行人撒得太开就会压到黄线甚至轨道上。
+     给人群一个更小的活动半径，只在台面中线附近走动 */
+  let crowd_area = {};
+  if (name === "subway") {
+    const b = bbox_of([PACKAGE.zones?.subway?.polygon || []]);
+    crowd_area = {
+      center: [(b.x0 + b.x1) / 2, (b.y0 + b.y1) / 2],
+      radius_px: Math.max(8, (b.y1 - b.y0) * 0.35),
+    };
+  }
+  add_people(root, { scene_id: name, count: people_n, seed: 1106, floor_y, ...crowd_area });
 
   /* 摄像头点位、报警与就近调度 */
   monitor?.dispose();

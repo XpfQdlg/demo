@@ -299,6 +299,11 @@ def main():
     red = clean(m["red"], 1, 1, 120)
     orange = clean(m["orange"], 1, 1, 100)
     forest = clean(m["forest"], 1, 2, 5000)
+    # 只保留西边那一片：三块里面积最大的
+    n_, lab_, stats_, _ = cv2.connectedComponentsWithStats(forest.astype(np.uint8), 8)
+    if n_ > 1:
+        big = 1 + int(np.argmax(stats_[1:, 4]))
+        forest = (lab_ == big)
     water = clean(m["water"], 1, 1, 300)
     grass = clean(m["grass"], 1, 1, 150)
     infield = clean(m["infield"], 1, 1, 400)
@@ -345,6 +350,17 @@ def main():
             })
             n += 1
         return n
+
+    # 铺装：校园内部、扣掉道路、绿化、水、森林、操场之后剩下的地面。
+    # 图上这部分是不着色的白，用户要的是校园里该有铺装变化
+    paved = campus_mask.copy()
+    paved &= ~cv2.dilate(road.astype(np.uint8), np.ones((3, 3), np.uint8)).astype(bool)
+    paved &= ~cv2.dilate((grass | water | infield | purple).astype(np.uint8),
+                         np.ones((5, 5), np.uint8)).astype(bool)
+    paved &= ~cv2.dilate((red | orange).astype(np.uint8), np.ones((5, 5), np.uint8)).astype(bool)
+    paved = clean(paved, 0, 1, 3000)
+    add_flat(paved, "plaza", "铺装", 3000)
+    print("铺装面积（平方米）:", round(float(paved.mean()) * w * h * MPP * MPP))
 
     add_flat(water, "water", "水体", 300)
     add_flat(grass, "green", "绿地", 300)
@@ -402,8 +418,22 @@ def main():
     if os.path.exists(old_json):
         old = json.load(open(old_json, encoding="utf-8"))
         if "subway" in old.get("zones", {}):
-            package["zones"]["subway"] = old["zones"]["subway"]
-            print("沿用旧地铁区域")
+            sub = dict(old["zones"]["subway"])
+            poly = sub.get("polygon") or []
+            if poly:
+                xs = [p[0] for p in poly]
+                ys = [p[1] for p in poly]
+                cx = (min(xs) + max(xs)) / 2
+                cy = (min(ys) + max(ys)) / 2
+                # 旧图 1079x1554，新图 1333x1079：旧坐标的 y 直接超出新图幅，
+                # 导航格会被填到图画外面，设备、行人、摄像头全部取不到点。
+                # 平移到一个空白角落，尺寸保持不变。
+                tx, ty = 1150 - cx, 980 - cy
+                sub["polygon"] = [[round(x + tx, 1), round(y + ty, 1)] for x, y in poly]
+                sub["bbox"] = [min(x for x, _ in sub["polygon"]), min(y for _, y in sub["polygon"]),
+                               max(x for x, _ in sub["polygon"]), max(y for _, y in sub["polygon"])]
+            package["zones"]["subway"] = sub
+            print("沿用旧地铁区域，并平移到新图幅内")
 
     with open(OUT_JSON, "w", encoding="utf-8") as f:
         json.dump(package, f, ensure_ascii=False, indent=1)

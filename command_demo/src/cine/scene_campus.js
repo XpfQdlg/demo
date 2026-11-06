@@ -42,14 +42,27 @@ const KIND_STYLE = {
 function make_ground() {
   const g = new THREE.Group();
 
-  /* PlaneGeometry 的 UV 是 0~1，2600 米要铺 650 块 4 米贴图 */
+  /* 远处用纯色底盘：草地贴图铺 650 次，掠射角下会叠出摩尔纹横条，
+     而六百米外的地面本来也看不出纹理 */
   const lawn = new THREE.Mesh(
     new THREE.PlaneGeometry(2600, 2600),
-    pbr("grass", { repeat: 650, normalScale: 1.0, tint: 0x6f8a4a })
+    new THREE.MeshStandardMaterial({ color: 0x6f8a4a, roughness: 0.96 })
   );
   lawn.rotation.x = -Math.PI / 2;
-  lawn.receiveShadow = true;
+  /* 一公里见方的地面接阴影会出自遮挡条纹（shadow acne），地面不接 */
+  lawn.receiveShadow = false;
   g.add(lawn);
+
+  /* 近处再叠一块带贴图的草地：只在镜头拉近时有细节，
+     尺寸压到 300 米以内，纹素密度够了就不会出摩尔纹 */
+  const near = new THREE.Mesh(
+    new THREE.PlaneGeometry(300, 300),
+    pbr("grass", { repeat: 75, normalScale: 1.0, tint: 0x6f8a4a })
+  );
+  near.rotation.x = -Math.PI / 2;
+  near.position.y = 0.01;
+  near.receiveShadow = true;
+  g.add(near);
 
   /* 地面贴图试过一版：一张图铺满一平方公里，掠射角下全是摩尔纹横条，
      调各向异性也压不住。改回草地底盘，贴地要素（水、绿地、操场）仍由数据包的
