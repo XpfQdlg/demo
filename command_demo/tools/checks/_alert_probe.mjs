@@ -1,8 +1,8 @@
 /**
  * 监控报警与就近调度的验收。
  *
- *   node tools/_alert_probe.mjs            校园
- *   node tools/_alert_probe.mjs community  小区
+ *   node tools/checks/_alert_probe.mjs            校园
+ *   node tools/checks/_alert_probe.mjs community  小区
  *
  * 无头渲染只有 2~5 帧，cinematic 的 dt 上限 0.05，仿真时间比墙钟慢十倍以上。
  * 所以报警计时不靠等，直接在页面里推 monitor.tick(0.05)。

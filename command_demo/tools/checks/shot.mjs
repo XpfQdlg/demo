@@ -2,8 +2,8 @@
  * 无头浏览器验收：截图 + 收集控制台错误。
  *
  * 用法：
- *   node tools/shot.mjs --url=http://localhost:5179/ --out=shots/a.png
- *   node tools/shot.mjs --url=... --out=... --eval="__app.set_overview()" --after=1500
+ *   node tools/checks/shot.mjs --url=http://localhost:5179/index.html --out=shots/a.png
+ *   node tools/checks/shot.mjs --url=... --out=... --eval="__app.set_overview()" --after=1500
  *
  * 需要系统已安装 Microsoft Edge。本机 Edge 在 x86 目录下。
  */
@@ -27,7 +27,7 @@ if (!edge) {
   process.exit(1);
 }
 
-const url = args.url || "http://localhost:5179/";
+const url = args.url || "http://localhost:5179/index.html";
 const out = args.out || "shots/_shot.png";
 const wait = Number(args.wait || 3000);
 const W = Number(args.w || 1600);

@@ -4,9 +4,9 @@
 build_scene_extra —— 生成三个场景的补充数据包
 
 输入：
-    ../command_demo/src/map/data/map_package.json   现有地图数据（校园、区域、道路）
-    ../../A85B...jpg                                嘉陵江路校区总平面图（山体走向参考）
-    ../../e7ea...png                                卫星图（小区 理工嘉苑 排布参考）
+    ../../command_demo/src/map/data/map_package.json   现有地图数据（校园、区域、道路）
+    ../../source/maps/campus_master_plan_2018_547x768.jpg  嘉陵江路校区总平面图（山体走向参考）
+    ../../source/maps/campus_satellite_858x948.png         卫星图（小区 理工嘉苑 排布参考）
 
 输出：
     ../../command_demo/src/map/data/scene_extra.json
@@ -17,7 +17,8 @@ build_scene_extra —— 生成三个场景的补充数据包
     hills      东西两座山：多边形轮廓（已挖掉校园）+ 山脊 + 峰高
     subway     地铁站：站台、轨道、列车的几何参数
 
-坐标一律像素坐标，1 像素 = 0.5 米。理由见 command_demo/INDEX.md 第五节。
+坐标一律像素坐标。比例尺以 map_package.json 的 scale.meters_per_px 为准，
+当前值 1.0；旧注释与 note 写 0.5，口径不一致，见 docs/06_3D技术架构.md 待优化项。
 """
 
 import json

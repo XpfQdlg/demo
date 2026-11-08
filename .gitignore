@@ -1,16 +1,20 @@
 # 依赖与构建产物
 node_modules/
 dist/
+dist-single/
 .vite/
 
-# 验收截图：由 tools/ 下的脚本随时重新生成，不入库
-shots/
+# 验收截图：由 tools/checks/ 下的脚本随时重新生成，不入库
+shots/*
+!shots/.gitkeep
 *.zip
 
 # 体积大的原始素材与外部参考项目，只留在本地
-assets_raw/
-xiaogou/
-demojietu/
+_local/
+
+# Python 字节码
+__pycache__/
+*.pyc
 
 # 中间调试图
 map_trace/debug/

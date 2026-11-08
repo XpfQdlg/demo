@@ -3,7 +3,7 @@
 build_map_package.py —— 把新图的区域与原图的建筑合成一套 3D 场景数据包
 
 输入：
-    0f0f59a3491b758639b24555e87dc91c.jpg   新图，1079 × 1554，提供区域轮廓与道路
+    campus_zoning_outline_1079x1554.jpg   新图，1079 × 1554，提供区域轮廓与道路
     ../out/map_features.json               原图提取结果，提供 20 个建筑的轮廓与高度档
 
 关键发现：
@@ -25,7 +25,7 @@ import cv2
 import numpy as np
 
 BASE = os.path.dirname(os.path.abspath(__file__))
-NEW_IMG = os.path.join(BASE, "..", "0f0f59a3491b758639b24555e87dc91c.jpg")
+NEW_IMG = os.path.join(BASE, "..", "..", "source", "maps", "campus_zoning_outline_1079x1554.jpg")
 OLD_FEATURES = os.path.join(BASE, "..", "out", "map_features.json")
 ZONES = os.path.join(BASE, "map_zones.json")
 ROADS = os.path.join(BASE, "map_roads.json")

@@ -1,7 +1,7 @@
 /**
  * 西北连体楼整改的验收截图。
  *
- *   node tools/_probe_conn.mjs
+ *   node tools/checks/_probe_conn.mjs
  *
  * 两个机位：北区学生公寓（north_dorm 六段）、西侧公寓（west_dorm 七段）。
  * 相机参数与 _closeup.mjs 一致，直接改 __cine 的目标机位后截图。

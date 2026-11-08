@@ -7,7 +7,9 @@ const root_to_cinematic = {
   configureServer(server) {
     server.middlewares.use((req, res, next) => {
       const url = (req.url || "").split("?")[0];
-      if (url === "/" || url === "/index.html") {
+      /* 只重定向根地址。不要把 /index.html 也跳走，
+         否则联动指挥主演示在开发服里没有任何入口，验收脚本也打不开 */
+      if (url === "/") {
         res.writeHead(302, { Location: "/cinematic.html?scene=campus" });
         res.end();
         return;

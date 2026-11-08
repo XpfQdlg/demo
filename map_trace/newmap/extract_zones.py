@@ -2,7 +2,7 @@
 """
 extract_zones.py —— 从新的校园总平面图提取分区多边形
 
-源图：0f0f59a3491b758639b24555e87dc91c.jpg，尺寸 1079 × 1554
+源图：campus_zoning_outline_1079x1554.jpg，尺寸 1079 × 1554
 
 图像特点与旧图不同：旧图是填色的色块，新图是**线条**。
 所以处理思路是先把线闭合成区域，再取外轮廓。
@@ -29,7 +29,7 @@ import cv2
 import numpy as np
 
 BASE = os.path.dirname(os.path.abspath(__file__))
-SRC = os.path.join(BASE, "..", "0f0f59a3491b758639b24555e87dc91c.jpg")
+SRC = os.path.join(BASE, "..", "..", "source", "maps", "campus_zoning_outline_1079x1554.jpg")
 
 # 色相分组，单位度。区间左闭右开，跨 0 度的用两段表示
 GROUPS = {

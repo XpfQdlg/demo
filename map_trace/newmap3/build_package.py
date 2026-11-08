@@ -17,7 +17,8 @@
     preview_classes.png 分类核对图
     preview_package.png 数据包核对图：建筑、道路、掩膜叠在一起
 
-比例尺按 0.5 米/像素（用户确认沿用旧图口径）。
+比例尺：MPP 实际取 1.0 米/像素。旧文档与输出里 note 字段仍写 0.5，两处口径不一致，
+待拿到实测尺寸后统一（见 docs/06_3D技术架构.md 待优化项）。
 
 用法：
     python build_package.py
@@ -31,11 +32,11 @@ import cv2
 import numpy as np
 
 BASE = os.path.dirname(os.path.abspath(__file__))
-SRC = os.path.join(BASE, "..", "..", "7250916fc110392f9947b1fc31a17217.jpg")
+SRC = os.path.join(BASE, "..", "..", "source", "maps", "campus_zoning_1333x1079.jpg")
 OUT_JSON = os.path.join(BASE, "map_package.json")
 OUT_GROUND = os.path.join(BASE, "ground.png")
 
-MPP = 1.0          # 米/像素（见下方说明）
+MPP = 1.0          # 米/像素；与 note 字段里的 0.5 不一致，待确认后统一
 CELL_PX = 2        # 行走掩膜一格 2 像素 = 2 米
 ROAD_W_M = 8.0     # 道路宽度，米
 

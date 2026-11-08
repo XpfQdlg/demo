@@ -2,7 +2,7 @@
 
 从校园总平面俯视图提取语义化轮廓，输出可供 3D 场景使用的多边形数据。
 
-源图：`D:\Desktop\demo\demo\04fe1873-e3af-44cc-8c6e-f450ef20e4d7.png`，尺寸 960 × 1218。
+源图：`..\source\maps\campus_overview_960x1218.png`，尺寸 960 × 1218。
 
 ---
 
@@ -27,7 +27,6 @@
 | `out/trace_annotated.png` | 原始轮廓编号图，用于追溯来源 |
 | `out/dots_annotated.png` | 白色中心点编号图 |
 | `out/map_features.svg` | 矢量预览，可直接在浏览器或 Illustrator 中打开 |
-| `debug/map_grid.png` | 坐标网格参考图 |
 
 ---
 

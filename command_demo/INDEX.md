@@ -1,6 +1,6 @@
 # command_demo · 代码索引
 
-联动指挥演示。方案见 `../docs/03_联动指挥方案.md`。
+联动指挥演示。方案见 `../docs/03_联动指挥方案.md`，技术架构见 `../docs/06_3D技术架构.md`。
 
 ---
 
@@ -85,9 +85,11 @@
 | --- | --- |
 | `index.html` | 页面骨架：画布、取景框、顶栏、执行体外框、事件流、状态栏 |
 | `package.json` | 依赖 three 0.169、vite 5.4；开发依赖 puppeteer-core |
-| `vite.config.js` | 开发服务器 5179；构建内联全部资源 |
-| `启动.bat` | 一键安装依赖、起服务、开浏览器 |
-| `联动指挥演示.html` | 单文件交付物，双击即开，离线可用 |
+| `vite.config.js` | 开发服务器 5179；两个入口（index 与 cinematic） |
+| `vite.single.config.js` | 单文件构建专用：只留观感版入口，动态导入并进一块 |
+| `观感版演示.html` | **最终交付物**，8 MB 单文件，双击即开，离线可用 |
+| `启动.bat` | 一键安装依赖、起服务、开浏览器（打开的是观感版） |
+| `../archive/联动指挥演示_旧版_2026-11-05.html` | 旧单文件构建，已归档，不用于展台 |
 | `src/main.js` | 入口，先画启动遮罩再构建场景 |
 | `src/style.css` | 基础样式：颜色角色、间距刻度、面板、按钮、取景框 |
 | `src/ui.css` | 组件样式：指挥图、弹窗、视频、识别卡、事件流、横幅 |
@@ -136,21 +138,19 @@
 | `src/data/events.js` | 三个演示剧本与等级元信息 |
 | `src/data/media_map.js` | 事件到现场视频的映射，当前路径为空 |
 | `src/scenes/` | 早期借用的参考场景，现已不再引用，可删除 |
-| `tools/shot.mjs` | 无头截图验收，需要本机 Edge |
-| `tools/cinematic_shot.mjs` | 观感版截图验收，四个场景各一张 |
-| `tools/perf.mjs` | 观感版结构体检：网格数、材质数、纹理数 |
-| `tools/file_check.mjs` | 单文件交付物验收：以 file:// 打开，切四场景各截一张 |
-| `tools/train_check.mjs` | 列车相位验收：把仿真时间推到进站、停站、出站三段分别截图 |
-| `tools/_probe_conn.mjs` | 西北与西侧公寓的连体楼验收：两个机位各一张 |
-| `tools/_closeup.mjs` | 通用近景验收，机位由命令行传 JSON |
-| `tools/_smoke.mjs` | 主演示冒烟：固定等待后截图，收集控制台报错 |
-| `tools/_follow.mjs` | 设备跟随验收：按 1/2 跟设备、按 G 回全局，各截一张 |
-| `tools/_tabs.mjs` | 校园与小区页签切换验收：确认只有一个场景根节点、机位确实变化 |
-| `tools/_alert_probe.mjs` | 监控报警验收：点位、报警文案、派了哪台、处置后道具与光圈复位；四场景通用 |
-| `tools/_ui_probe.mjs` | 讲解面板验收：设备列表、事件流、点击派单、跟随优先、H 收起 |
-| `tools/bundle.mjs` | 单文件打包 |
-| `_backup/` | 改数据前的快照 |
-| `shots/` | 验收截图 |
+| `tools/bundle.mjs` | 单文件打包：内联 JS、CSS、46 个贴图与 favicon，输出 `观感版演示.html` |
+| `tools/checks/` | 验收脚本，逐个说明见 `tools/checks/README.md` |
+| `tools/checks/shot.mjs` | 无头截图验收，需要本机 Edge |
+| `tools/checks/cinematic_shot.mjs` | 观感版截图验收，四个场景各一张 |
+| `tools/checks/perf.mjs` | 观感版结构体检：网格数、材质数、纹理数 |
+| `tools/checks/file_check.mjs` | 单文件交付物验收：以 file:// 打开，切四场景，检查贴图解码与报错 |
+| `tools/checks/train_check.mjs` | 列车相位验收：把仿真时间推到进站、停站、出站三段分别截图 |
+| `tools/checks/_smoke.mjs` | 主演示冒烟：固定等待后截图，收集控制台报错 |
+| `tools/checks/_alert_probe.mjs` | 监控报警验收：点位、报警文案、派了哪台、处置后道具与光圈复位；四场景通用 |
+| `tools/checks/_ui_probe.mjs` | 讲解面板验收：设备列表、事件流、点击派单、跟随优先、H 收起 |
+| `tools/checks/_follow.mjs` / `_tabs.mjs` / `_life_probe.mjs` | 跟随、页签切换、行人与道具验收 |
+| `shots/` | 验收截图输出目录，运行时自动创建，不入库 |
+| `../map_trace/_archive/backup_20261106/` | 改数据前的 `map_package.json` 与 `ground.png` 快照 |
 
 ---
 
@@ -162,13 +162,16 @@ npm install
 npm run dev          # http://localhost:5179
 
 # 截图验收
-node tools/shot.mjs --out=shots/a.png --wait=3000
+node tools/checks/shot.mjs --out=shots/a.png --wait=3000
 
-# 单文件打包
-node tools/bundle.mjs
+# 单文件打包（最终交付物）
+npm run bundle        # 等价于 node tools/bundle.mjs --clean
+
+# 单文件离线验收：四场景截图 + 贴图解码检查
+node tools/checks/file_check.mjs
 ```
 
-交付时直接双击 `联动指挥演示.html`，不需要服务器与网络。
+最终产物是观感版 `cinematic.html`，交付形态是 `观感版演示.html`。展台直接双击该文件，不需要 Node 与网络。
 
 ---
 
@@ -187,12 +190,12 @@ node tools/bundle.mjs
 
 ## 五、关键约定
 
-**坐标**：数据层与接口层一律像素坐标，只在 `map/coords.js` 转世界坐标。比例尺 1 像素 = 0.5 米，来自 `map_package.json`，地图换版只换数据包。
+**坐标**：数据层与接口层一律像素坐标，只在 `map/coords.js` 转世界坐标。比例尺取自 `map_package.json`（当前 `meters_per_px` 为 1.0；旧文档与 note 字段写 0.5，口径待实测校正），地图换版只换数据包。
 
 **寻路**：所有场景统一走 A*，网格来自 `nav_grid.js`，每个场景有两套：
 `all`（机器狗，建筑与轨道之外都行）与 `road`（人形机器人，只走道路 / 站台面）。
 网格按多边形栅格化现场生成，扫描线填充，2 米一格；改数据包即刻生效，不用重跑 Python。
-拿不到路径时退回直线兜底，保证不会卡死。
+拿不到路径时返回 `null`，不退回直线；调度与手动导航只提示、不移动（见下方「没有路径就不动」）。
 
 **站位**：用最远点采样（`spread_spots`）而不是「按开阔度排序再卡最小间距」。
 后者会把设备全挤在同一片空地上，四台机器看起来挤成一堆。
@@ -407,7 +410,7 @@ medium 为默认：像素比 1.2、GTAO 8 采样、阴影 2048。页面上有实
 
 ---
 
-## 六、演示流程
+## 七、演示流程
 
 1. 打开页面，默认进入校园场景，第一人称视角在第一台机器狗上。
 2. 点顶栏「剧本 1」，校园教学楼东侧出现明火告警。
@@ -420,7 +423,7 @@ medium 为默认：像素比 1.2、GTAO 8 采样、阴影 2048。页面上有实
 
 ---
 
-## 七、依赖
+## 八、依赖
 
 | 包 | 版本 | 用途 |
 | --- | --- | --- |

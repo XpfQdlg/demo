@@ -802,7 +802,7 @@ addEventListener("keydown", (e) => {
 
 async function boot() {
   /* 天空与环境光 */
-  await cine.load_sky(new URL("cinematic/sky.jpg", document.baseURI).href, {
+  await cine.load_sky(PBR.asset_url("cinematic/sky.jpg"), {
     intensity: 0.7,
     horizon: 0xbcc9d4,
     zenith: 0x6e9ccb,

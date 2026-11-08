@@ -28,7 +28,7 @@ import cv2
 import numpy as np
 
 BASE = os.path.dirname(os.path.abspath(__file__))
-SRC = os.path.join(BASE, "..", "0f0f59a3491b758639b24555e87dc91c.jpg")
+SRC = os.path.join(BASE, "..", "..", "source", "maps", "campus_zoning_outline_1079x1554.jpg")
 ZONES = os.path.join(BASE, "map_zones.json")
 PACKAGE = os.path.join(BASE, "map_package.json")
 

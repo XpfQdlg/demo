@@ -29,17 +29,20 @@ page.on("pageerror", (e) => logs.push("[pageerror] " + e.message));
 page.on("requestfailed", (r) => logs.push("[reqfail] " + r.url()));
 
 const t0 = Date.now();
-await page.goto("http://localhost:5179/", { waitUntil: "domcontentloaded", timeout: 60000 });
+await page.goto("http://localhost:5179/index.html", { waitUntil: "domcontentloaded", timeout: 60000 });
 console.log("domcontentloaded", Date.now() - t0, "ms");
 await new Promise((r) => setTimeout(r, wait));
 
 const info = await page.evaluate(() => {
   const c = document.querySelector("canvas");
-  const st = window.__app?.world?.agents ? Object.keys(window.__app.world.agents).length : "n/a";
+  const app = window.__app;
+  /* World 的执行体按场景存在 scenes 里，用 agents_of 读；
+     不要再读 world.agents，这个字段不存在 */
+  const list = app?.world?.agents_of?.(app.scene_id) ?? null;
   return {
     canvas: c ? `${c.width}×${c.height}` : "none",
-    agents: st,
-    scene: window.__app?.current_scene ?? "n/a",
+    agents: list ? list.length : "n/a",
+    scene: app?.scene_id ?? "n/a",
     fps: document.querySelector("[data-fps]")?.textContent ?? "",
   };
 });

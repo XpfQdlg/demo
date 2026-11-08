@@ -20,10 +20,20 @@ import * as THREE from "three";
    首次渲染就是一整片纯色，之后再补也来不及（着色器已经编译过）。
    ══════════════════════════════════════════════════════════════════════════ */
 
-/* 注意结尾的斜杠：href 会保留它，缺了就会拼成 materialsground/color.webp */
+/* 单文件交付时，打包脚本会在页面里先注入 window.__INLINE_ASSETS：
+   键是 "cinematic/materials/<slug>/<channel>.webp"，值是 data URI。
+   file:// 下直接读本地图片会被跨源限制挡住，WebGL 上传纹理会失败，
+   所以有内联表就必须优先用它。 */
+const INLINE = typeof window !== "undefined" ? window.__INLINE_ASSETS : null;
+
+/** 把站点内的相对路径解析成可用 URL；单文件模式下返回内联的 data URI */
+export function asset_url(rel) {
+  return (INLINE && INLINE[rel]) || new URL(rel, document.baseURI).href;
+}
+
 /* 素材放在 public/cinematic/ 下：dev 与 build 都从站点根路径取，
-   构建时原样拷到 dist，不打进 JS 包。 */
-const BASE = new URL("cinematic/materials/", document.baseURI).href;
+   构建时原样拷到 dist；单文件模式由打包脚本转成 data URI。 */
+
 
 /** 这些材质在 AmbientCG 上本身没有 AO 通道 */
 const AO_MISSING = new Set(["wood", "metal", "facade", "tactile"]);
@@ -43,7 +53,7 @@ function load_one(slug, channel, { srgb = false } = {}) {
   if (cache.has(key)) return Promise.resolve(cache.get(key));
   if (pending.has(key)) return pending.get(key);
 
-  const url = `${BASE.replace(/\/?$/, "/")}${slug}/${channel}.webp`;
+  const url = asset_url(`cinematic/materials/${slug}/${channel}.webp`);
   const p = new Promise((resolve) => {
     loader.load(
       url,

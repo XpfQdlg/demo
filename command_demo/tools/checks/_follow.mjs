@@ -1,7 +1,7 @@
 /**
  * 设备跟随验收：按 1 跟第一台设备，截图看主画面与小窗。
  *
- *   node tools/_follow.mjs
+ *   node tools/checks/_follow.mjs
  */
 import puppeteer from "puppeteer-core";
 import fs from "node:fs";

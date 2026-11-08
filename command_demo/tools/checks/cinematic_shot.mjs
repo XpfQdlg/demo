@@ -1,8 +1,8 @@
 /**
  * 观感版预览页的截图验收。
  *
- *   node tools/cinematic_shot.mjs                    两个场景各一张
- *   node tools/cinematic_shot.mjs --scene=community  只拍小区
+ *   node tools/checks/cinematic_shot.mjs                    两个场景各一张
+ *   node tools/checks/cinematic_shot.mjs --scene=community  只拍小区
  *
  * 注意：材质要先预载完才建场景，一共四百多张贴图，
  * 无头环境下要等 20 秒以上。等的时间短了会拍到空场景。
