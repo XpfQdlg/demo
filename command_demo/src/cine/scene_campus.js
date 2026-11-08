@@ -71,6 +71,79 @@ function make_ground() {
   return g;
 }
 
+/** 点在多边形内（射线法），坐标用像素 */
+function inside_poly(poly, x, y) {
+  let c = false;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    const [xi, yi] = poly[i];
+    const [xj, yj] = poly[j];
+    if ((yi > y) !== (yj > y) && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) c = !c;
+  }
+  return c;
+}
+
+/**
+ * 西侧森林带：按数据包的森林轮廓撒树。
+ *
+ * 换新图时删掉了旧版手写的两座小山，注释说「森林由数据包描述」，
+ * 但校园场景没有消费这份数据，周边就只剩空草地。
+ * 这里补回 3D 树，同时压一层深绿地面，树缝里不露草坪色。
+ */
+function add_forest_belt(root) {
+  const forests = PACKAGE.zones?.forest?.forests?.length
+    ? PACKAGE.zones.forest.forests
+    : [PACKAGE.zones?.forest?.polygon].filter(Boolean);
+  if (!forests.length) return;
+
+  const campus = PACKAGE.zones?.campus?.polygon || [];
+  const path = PACKAGE.forest_path?.polygon || [];
+
+  /* 林下地面：深绿薄片，边界一眼能认出是林地 */
+  for (const poly of forests) {
+    const pts = to_world(poly).map(([x, z]) => new THREE.Vector2(x, -z));
+    const geo = new THREE.ShapeGeometry(new THREE.Shape(pts));
+    geo.rotateX(-Math.PI / 2);
+    const patch = new THREE.Mesh(
+      geo,
+      pbr("grass", { repeat: 1 / 6, normalScale: 1.2, tint: 0x4b6338 })
+    );
+    patch.position.y = 0.02;
+    patch.receiveShadow = true;
+    root.add(patch);
+  }
+
+  let seed = 20261108;
+  const rnd = () => {
+    seed = (seed * 1664525 + 1013904223) >>> 0;
+    return seed / 4294967296;
+  };
+
+  for (const poly of forests) {
+    const xs = poly.map((p) => p[0]);
+    const ys = poly.map((p) => p[1]);
+    const x0 = Math.min(...xs), x1 = Math.max(...xs);
+    const y0 = Math.min(...ys), y1 = Math.max(...ys);
+    const area_ha = ((x1 - x0) * (y1 - y0) * MPP * MPP) / 10000;
+    /* 每公顷 60 棵，上限 1800 棵。合并静态几何后只多几次绘制调用 */
+    const n = Math.min(1800, Math.round(area_ha * 60));
+    let placed = 0;
+    for (let i = 0; i < n * 8 && placed < n; i++) {
+      const px = x0 + rnd() * (x1 - x0);
+      const py = y0 + rnd() * (y1 - y0);
+      if (!inside_poly(poly, px, py)) continue;
+      /* 不往校园里长树，也不挡林间道路 */
+      if (campus.length >= 3 && inside_poly(campus, px, py)) continue;
+      if (path.length >= 3 && inside_poly(path, px, py)) continue;
+      const [x, z] = PW(px, py);
+      const t = tree({ h: 7 + rnd() * 6, seed: 7000 + placed, tone: placed });
+      t.position.set(x, 0, z);
+      t.rotation.y = rnd() * Math.PI * 2;
+      root.add(t);
+      placed++;
+    }
+  }
+}
+
 /** 道路：直接铺 map_package 里的路面多边形，含中间的岛洞 */
 function make_roads(group) {
   const R = PACKAGE.roads;
@@ -292,8 +365,11 @@ export async function build_campus(cine) {
     root.add(fence);
   }
 
-  /* 旧的东北、西侧两座小山是手写在世界坐标里的，只对旧图成立。
-     新图的森林由数据包描述，这里不再摆额外的山。 */
+  /* 西侧森林带。
+     旧版是手写的两座小山，换新图时删掉了，但新图只给了森林多边形，
+     没有补 3D 树，结果校园周边只剩一片空草地。
+     这里按数据包的森林轮廓撒树，森林页签用同一份数据。 */
+  add_forest_belt(root);
 
   /* 东边紧挨着的小区：和「小区」页签是同一份数据、同一个函数，
      两处看到的楼一模一样，切换场景只是换了机位。 */
@@ -301,8 +377,17 @@ export async function build_campus(cine) {
      而不是三百米外的校园设备 */
   add_community(root, { robots: true, cine, wall: true });
 
-  /* 远景体量 */
-  add_distant_town(root, { center: [0, 0], count: 70, seed: 20261114, rMin: 420, rMax: 720 });
+  /* 远景体量。避让校园、小区、森林与地铁，远景楼不能长在林地或校园里 */
+  const avoid_world = [
+    PACKAGE.zones?.campus?.polygon,
+    PACKAGE.zones?.community?.polygon,
+    PACKAGE.zones?.subway?.polygon,
+    ...(PACKAGE.zones?.forest?.forests || [PACKAGE.zones?.forest?.polygon]),
+  ].filter(Boolean).map(to_world);
+  add_distant_town(root, {
+    center: [0, 0], count: 70, seed: 20261114, rMin: 420, rMax: 720,
+    avoid: avoid_world,
+  });
 
   /* 设备：3 台机器狗（走建筑外全域）+ 2 台人形（只走道路） */
   /* 校园设备按校界卡航点：外出到校外的田里、或者钻进小区的院子，

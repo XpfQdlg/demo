@@ -256,7 +256,23 @@ export function glass_material(tint = 0x1e2a30) {
  * 远处总有别的楼、树、电线杆。这些远景不需要细节——雾会把它们糊掉，
  * 只需要正确的体量分布和高度层次，画面立刻从「模型」变成「地方」。
  */
-export function add_distant_town(parent, { center = [0, 0], count = 46, seed = 7, rMin = 210, rMax = 380 } = {}) {
+/** 点在多边形内（世界坐标 x-z 平面） */
+function inside_xz(poly, x, z) {
+  let c = false;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    const [xi, zi] = poly[i];
+    const [xj, zj] = poly[j];
+    if ((zi > z) !== (zj > z) && x < ((xj - xi) * (z - zi)) / (zj - zi) + xi) c = !c;
+  }
+  return c;
+}
+
+export function add_distant_town(parent, {
+  center = [0, 0], count = 46, seed = 7, rMin = 210, rMax = 380,
+  /* 避让区：世界坐标多边形。远景楼不能落在校园、森林、小区里，
+     否则会出现树上长楼、楼里长树 */
+  avoid = [],
+} = {}) {
   let s = seed;
   const rnd = () => {
     s = (s * 1664525 + 1013904223) >>> 0;
@@ -298,6 +314,8 @@ export function add_distant_town(parent, { center = [0, 0], count = 46, seed = 7
       const w = 16 + rnd() * 30;
       const d = 14 + rnd() * 22;
       const h = 9 + rnd() * 36;
+
+      if (avoid.some((poly) => poly.length >= 3 && inside_xz(poly, px, pz))) continue;
 
       const box = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mats[(rnd() * mats.length) | 0]);
       box.position.set(px, h / 2, pz);
