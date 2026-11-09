@@ -1,0 +1,86 @@
+{
+  "_note": "执行体身份与视角参数。位置不在本文件里，由 build_scene 返回的 spawns 按场景内顺序分配。speed_mps 为演示加速值，真实机器狗约 1.6 m/s，这里是让画面上的调度在十几秒内完成。",
+  "agents": [
+    {
+      "agent_id": "k9-forest-01",
+      "name": "巡检机器狗 01",
+      "type": "dog",
+      "scene": "forest",
+      "view_height": 1.15,
+      "fov": 72,
+      "speed_mps": 10
+    },
+    {
+      "agent_id": "k9-campus-01",
+      "name": "巡检机器狗 01",
+      "type": "dog",
+      "scene": "campus",
+      "view_height": 1.15,
+      "fov": 72,
+      "speed_mps": 10
+    },
+    {
+      "agent_id": "k9-campus-02",
+      "name": "巡检机器狗 02",
+      "type": "dog",
+      "scene": "campus",
+      "view_height": 1.15,
+      "fov": 72,
+      "speed_mps": 10
+    },
+    {
+      "agent_id": "k9-campus-03",
+      "name": "巡检机器狗 03",
+      "type": "dog",
+      "scene": "campus",
+      "view_height": 1.15,
+      "fov": 72,
+      "speed_mps": 10
+    },
+    {
+      "agent_id": "hr-campus-01",
+      "name": "人形巡检机器人 01",
+      "type": "humanoid",
+      "scene": "campus",
+      "view_height": 1.62,
+      "fov": 68,
+      "speed_mps": 8
+    },
+    {
+      "agent_id": "k9-community-01",
+      "name": "巡检机器狗 01",
+      "type": "dog",
+      "scene": "community",
+      "view_height": 1.15,
+      "fov": 72,
+      "speed_mps": 10
+    },
+    {
+      "agent_id": "hr-community-01",
+      "name": "人形巡检机器人 01",
+      "type": "humanoid",
+      "scene": "community",
+      "view_height": 1.62,
+      "fov": 68,
+      "speed_mps": 8
+    },
+    {
+      "agent_id": "k9-subway-01",
+      "name": "巡检机器狗 01",
+      "type": "dog",
+      "scene": "subway",
+      "view_height": 1.15,
+      "fov": 72,
+      "speed_mps": 10
+    },
+    {
+      "agent_id": "hr-subway-01",
+      "name": "人形巡检机器人 01",
+      "type": "humanoid",
+      "scene": "subway",
+      "view_height": 1.62,
+      "fov": 68,
+      "speed_mps": 8
+    }
+  ]
+}

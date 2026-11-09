@@ -1,0 +1,118 @@
+{
+  "grass": {
+    "source": "Ground033",
+    "maps": [
+      "ao",
+      "color",
+      "normal",
+      "roughness"
+    ],
+    "bytes": 353318
+  },
+  "concrete_wall": {
+    "source": "Concrete006",
+    "maps": [
+      "ao",
+      "color",
+      "normal",
+      "roughness"
+    ],
+    "bytes": 591854
+  },
+  "wood": {
+    "source": "Wood019",
+    "maps": [
+      "color",
+      "normal",
+      "roughness"
+    ],
+    "bytes": 229136
+  },
+  "facade": {
+    "source": "Facade004",
+    "maps": [
+      "color",
+      "normal",
+      "roughness"
+    ],
+    "bytes": 27480
+  },
+  "rock": {
+    "source": "Rock031",
+    "maps": [
+      "ao",
+      "color",
+      "normal",
+      "roughness"
+    ],
+    "bytes": 766584
+  },
+  "brick": {
+    "source": "Bricks020",
+    "maps": [
+      "ao",
+      "color",
+      "normal",
+      "roughness"
+    ],
+    "bytes": 364006
+  },
+  "paving": {
+    "source": "PavingStones041",
+    "maps": [
+      "ao",
+      "color",
+      "normal",
+      "roughness"
+    ],
+    "bytes": 740824
+  },
+  "asphalt": {
+    "source": "Asphalt022",
+    "maps": [
+      "ao",
+      "color",
+      "normal",
+      "roughness"
+    ],
+    "bytes": 659114
+  },
+  "metal": {
+    "source": "Metal040",
+    "maps": [
+      "color",
+      "normal",
+      "roughness"
+    ],
+    "bytes": 291818
+  },
+  "tiles": {
+    "source": "Tiles010",
+    "maps": [
+      "ao",
+      "color",
+      "normal",
+      "roughness"
+    ],
+    "bytes": 179494
+  },
+  "concrete_floor": {
+    "source": "Concrete008",
+    "maps": [
+      "ao",
+      "color",
+      "normal",
+      "roughness"
+    ],
+    "bytes": 314364
+  },
+  "tactile": {
+    "source": "TactilePaving003",
+    "maps": [
+      "color",
+      "normal",
+      "roughness"
+    ],
+    "bytes": 513052
+  }
+}
