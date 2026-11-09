@@ -1,0 +1,708 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#05070c" />
+  <meta name="color-scheme" content="dark" />
+  <meta name="description" content="AEGIS 移动指挥终端 · 校园中枢展台演示" />
+  <title>AEGIS 移动指挥终端 · 校园中枢</title>
+  <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+  <link rel="stylesheet" href="./src/mobile/ui.css" />
+</head>
+<body>
+  <!-- 图标全部内联成 symbol，各面板/浮层共用一份，避免外链图片 -->
+  <svg class="icon-sprite" width="0" height="0" aria-hidden="true" focusable="false">
+    <defs>
+      <symbol id="ic-shield" viewBox="0 0 24 24">
+        <path d="M12 3 19 5.8v5.3c0 4.2-2.8 7.3-7 9.2-4.2-1.9-7-5-7-9.2V5.8L12 3Z" />
+        <path d="M12 8.6v4.1" />
+        <circle cx="12" cy="15.7" r="1" fill="currentColor" stroke="none" />
+      </symbol>
+      <symbol id="ic-fire" viewBox="0 0 24 24">
+        <path d="M12.6 3.4c.4 2.6-1 4.2-2.4 5.7S7.8 12 7.8 13.6a4.7 4.7 0 0 0 9.4 0c0-1.2-.4-2.3-1.1-3.3-.1 1-.6 1.9-1.4 2.4.4-3.4-.3-6.7-2.1-9.3Z" />
+      </symbol>
+      <symbol id="ic-crowd" viewBox="0 0 24 24">
+        <circle cx="12" cy="7.4" r="2.7" />
+        <path d="M7.6 19.2v-1.3a4.4 4.4 0 0 1 8.8 0v1.3" />
+        <circle cx="4.9" cy="9.4" r="1.8" />
+        <path d="M2.6 17.4v-.8a3 3 0 0 1 3.6-2.9" />
+        <circle cx="19.1" cy="9.4" r="1.8" />
+        <path d="M21.4 17.4v-.8a3 3 0 0 0-3.6-2.9" />
+      </symbol>
+      <symbol id="ic-trash" viewBox="0 0 24 24">
+        <path d="M4.8 7h14.4" />
+        <path d="M9.6 7V4.8h4.8V7" />
+        <path d="M6.6 7l.8 11.4a2 2 0 0 0 2 1.8h5.2a2 2 0 0 0 2-1.8L17.4 7" />
+        <path d="M10.2 10.8v5.6M13.8 10.8v5.6" />
+      </symbol>
+      <symbol id="ic-bell-on" viewBox="0 0 24 24">
+        <path d="M6.2 15.8V10a5.8 5.8 0 0 1 11.6 0v5.8l1.6 2.2H4.6l1.6-2.2Z" />
+        <path d="M10 19.6a2 2 0 0 0 4 0" />
+      </symbol>
+      <symbol id="ic-bell-off" viewBox="0 0 24 24">
+        <path d="M6.2 15.8V10a5.8 5.8 0 0 1 11.6 0v5.8l1.6 2.2H4.6l1.6-2.2Z" />
+        <path d="M10 19.6a2 2 0 0 0 4 0" />
+        <path d="M4 4l16 16" />
+      </symbol>
+      <symbol id="ic-grid" viewBox="0 0 24 24">
+        <rect x="4" y="4" width="6.6" height="6.6" rx="1.6" />
+        <rect x="13.4" y="4" width="6.6" height="6.6" rx="1.6" />
+        <rect x="4" y="13.4" width="6.6" height="6.6" rx="1.6" />
+        <rect x="13.4" y="13.4" width="6.6" height="6.6" rx="1.6" />
+      </symbol>
+      <symbol id="ic-close" viewBox="0 0 24 24">
+        <path d="M6 6l12 12M18 6 6 18" />
+      </symbol>
+      <symbol id="ic-camera" viewBox="0 0 24 24">
+        <path d="M4 8.6h3.2l1.4-2.1h6.8l1.4 2.1H20v10.3H4V8.6Z" />
+        <circle cx="12" cy="13.4" r="3.3" />
+      </symbol>
+      <symbol id="ic-check" viewBox="0 0 24 24">
+        <path d="M5 12.6l4.4 4.4L19 7.6" />
+      </symbol>
+      <symbol id="ic-send" viewBox="0 0 24 24">
+        <path d="M4 12 20 5l-4.6 15-3.8-6.1L4 12Z" />
+        <path d="M11.6 13.9 20 5" />
+      </symbol>
+      <symbol id="ic-user" viewBox="0 0 24 24">
+        <circle cx="12" cy="8" r="3.4" />
+        <path d="M5.6 20v-1.6A5.4 5.4 0 0 1 11 13h2a5.4 5.4 0 0 1 5.4 5.4V20" />
+      </symbol>
+      <symbol id="ic-mic" viewBox="0 0 24 24">
+        <rect x="9" y="3.4" width="6" height="10" rx="3" />
+        <path d="M5.8 11.4a6.2 6.2 0 0 0 12.4 0" />
+        <path d="M12 17.6V21M8.6 21h6.8" />
+      </symbol>
+      <symbol id="ic-pin" viewBox="0 0 24 24">
+        <path d="M12 21s6.4-5.4 6.4-10.4a6.4 6.4 0 1 0-12.8 0C5.6 15.6 12 21 12 21Z" />
+        <circle cx="12" cy="10.4" r="2.3" />
+      </symbol>
+      <symbol id="ic-gift" viewBox="0 0 24 24">
+        <path d="M4.4 9.4h15.2v10.2H4.4z" />
+        <path d="M3.2 6.4h17.6v3H3.2zM12 6.4V20" />
+        <path d="M12 6.4S10.8 3 8.6 3 5.6 6.4 8 6.4M12 6.4s1.2-3.4 3.4-3.4S18.4 6.4 16 6.4" />
+      </symbol>
+      <symbol id="ic-bolt" viewBox="0 0 24 24">
+        <path d="M13.2 2.6 5.6 13h5l-1.4 8.4 8-11.2h-5l1-7.6Z" />
+      </symbol>
+      <symbol id="ic-trophy" viewBox="0 0 24 24">
+        <path d="M8 4.4h8v4.2a4 4 0 0 1-8 0V4.4Z" />
+        <path d="M8 5.6H4.8v1.8A3.4 3.4 0 0 0 8 10.8M16 5.6h3.2v1.8a3.4 3.4 0 0 1-3.2 3.4" />
+        <path d="M12 12.8V17M8.6 20h6.8" />
+      </symbol>
+    </defs>
+  </svg>
+
+  <div class="app" id="app" data-active-tab="alerts">
+    <!-- 顶栏常驻：连接状态、未读、模型总览、提示音 -->
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true">
+          <svg class="ic"><use href="#ic-shield"></use></svg>
+        </span>
+        <div class="brand-copy">
+          <h1 class="brand-title">
+            AEGIS
+            <span class="unread-badge" id="unread-badge" hidden>0</span>
+          </h1>
+          <p class="brand-sub">移动指挥终端</p>
+        </div>
+      </div>
+      <div class="topbar-right">
+        <div class="conn" id="conn" data-mode="connecting" role="status" aria-live="polite">
+          <span class="conn-dot" aria-hidden="true"></span>
+          <span class="conn-text" id="conn-text">连接中</span>
+        </div>
+        <button class="icon-btn model-btn" id="models-btn" type="button" aria-label="四大模型应用总览">
+          <svg class="ic" aria-hidden="true"><use href="#ic-grid"></use></svg>
+          <span class="btn-label">模型</span>
+        </button>
+        <button class="icon-btn" id="sound-toggle" type="button" aria-label="关闭提示音" aria-pressed="true">
+          <svg class="ic ic-bell-on" aria-hidden="true"><use href="#ic-bell-on"></use></svg>
+          <svg class="ic ic-bell-off" aria-hidden="true"><use href="#ic-bell-off"></use></svg>
+        </button>
+      </div>
+    </header>
+
+    <div class="views">
+      <!-- ══════════ 预警 Tab ══════════ -->
+      <section class="main view is-active" id="main" data-panel="alerts">
+        <section class="hero-card">
+          <div class="hero-top">
+            <div class="hero-copy">
+              <span class="hero-kicker">AEGIS · 实时预警</span>
+              <h2 class="hero-title">现场态势</h2>
+            </div>
+            <span class="hero-chip" id="hero-online">本场 0 人</span>
+          </div>
+
+          <!-- 场景条：当前大屏场景 + 该场景专属模型（颜色跟着模型主题色走） -->
+          <section class="scene-bar" id="scene-bar" aria-label="当前场景与场景模型">
+            <div class="scene-main">
+              <span class="scene-dot" aria-hidden="true"></span>
+              <span class="scene-text" id="scene-text">等待大屏选择场景</span>
+            </div>
+            <div class="scene-meta" id="scene-meta">监控点位 —</div>
+          </section>
+
+          <!-- 统计条：待处置 / 处置中 / 已处置 / 今日 -->
+          <section class="stats" aria-label="预警统计">
+            <div class="stat" data-tone="danger">
+              <span class="stat-num" id="stat-pending">0</span>
+              <span class="stat-label">待处置</span>
+            </div>
+            <div class="stat" data-tone="warn">
+              <span class="stat-num" id="stat-handling">0</span>
+              <span class="stat-label">处置中</span>
+            </div>
+            <div class="stat" data-tone="ok">
+              <span class="stat-num" id="stat-resolved">0</span>
+              <span class="stat-label">已处置</span>
+            </div>
+            <div class="stat" data-tone="info">
+              <span class="stat-num" id="stat-today">0</span>
+              <span class="stat-label">今日</span>
+            </div>
+          </section>
+        </section>
+
+        <!-- 筛选：纯前端切换，不重新拉数据 -->
+        <div class="filters" id="filters" role="tablist" aria-label="筛选预警">
+          <button class="filter is-active" type="button" role="tab" aria-selected="true" data-filter="all">
+            全部<span class="filter-count">0</span>
+          </button>
+          <button class="filter" type="button" role="tab" aria-selected="false" data-filter="pending">
+            待处置<span class="filter-count">0</span>
+          </button>
+          <button class="filter" type="button" role="tab" aria-selected="false" data-filter="handling">
+            处置中<span class="filter-count">0</span>
+          </button>
+          <button class="filter" type="button" role="tab" aria-selected="false" data-filter="resolved">
+            已处置<span class="filter-count">0</span>
+          </button>
+        </div>
+
+        <!-- 连接状态提示条：按 mode 由脚本渲染 -->
+        <div class="banner-slot" id="banner-slot" hidden></div>
+
+        <!-- 观众上报受理中的临时状态条：收到 visitor 预警后自动消失 -->
+        <div class="visitor-pending" id="visitor-pending" hidden role="status" aria-live="polite">
+          <span class="visitor-pending-dot" aria-hidden="true"></span>
+          <span class="visitor-pending-text" id="visitor-pending-text">你的上报已受理，指挥中心正在派单…</span>
+        </div>
+
+        <section class="feed" aria-label="预警列表">
+          <div class="feed-head">
+            <h3 class="sec-title">事件流</h3>
+            <span class="feed-live"><i aria-hidden="true"></i>LIVE</span>
+          </div>
+          <div class="list" id="list"></div>
+
+          <!-- 首次连接且没有缓存数据时的骨架屏 -->
+          <div class="skeleton" id="skeleton" hidden aria-hidden="true">
+            <div class="skel-card">
+              <span class="skel-icon shimmer"></span>
+              <span class="skel-body">
+                <span class="skel-line w60 shimmer"></span>
+                <span class="skel-line w45 shimmer"></span>
+                <span class="skel-line w90 shimmer"></span>
+                <span class="skel-steps shimmer"></span>
+              </span>
+            </div>
+            <div class="skel-card">
+              <span class="skel-icon shimmer"></span>
+              <span class="skel-body">
+                <span class="skel-line w50 shimmer"></span>
+                <span class="skel-line w70 shimmer"></span>
+                <span class="skel-line w85 shimmer"></span>
+                <span class="skel-steps shimmer"></span>
+              </span>
+            </div>
+            <div class="skel-card">
+              <span class="skel-icon shimmer"></span>
+              <span class="skel-body">
+                <span class="skel-line w65 shimmer"></span>
+                <span class="skel-line w40 shimmer"></span>
+                <span class="skel-line w80 shimmer"></span>
+                <span class="skel-steps shimmer"></span>
+              </span>
+            </div>
+          </div>
+
+          <!-- 空状态：插画 + 一行解释，具体文案由脚本按模式给 -->
+          <div class="empty" id="empty" hidden>
+            <svg class="empty-art" viewBox="0 0 96 96" fill="none" aria-hidden="true">
+              <circle cx="48" cy="48" r="34" stroke="currentColor" stroke-opacity=".16" stroke-dasharray="3 7" />
+              <circle cx="48" cy="48" r="22" stroke="currentColor" stroke-opacity=".22" />
+              <circle cx="48" cy="48" r="10" stroke="currentColor" stroke-opacity=".3" />
+              <g class="empty-sweep">
+                <path d="M48 48 70 30" stroke="currentColor" stroke-opacity=".45" stroke-linecap="round" />
+                <circle cx="63.5" cy="36.5" r="2.6" fill="currentColor" fill-opacity=".85" />
+              </g>
+              <circle cx="48" cy="48" r="2" fill="currentColor" />
+              <path d="M48 10v4M48 82v4M10 48h4M82 48h4" stroke="currentColor" stroke-opacity=".28" stroke-linecap="round" />
+            </svg>
+            <p class="empty-title" id="empty-title">暂无预警</p>
+            <p class="empty-sub" id="empty-sub">指挥大屏正在巡检</p>
+            <button class="empty-join" id="empty-join" type="button">
+              <svg class="ic" aria-hidden="true"><use href="#ic-camera"></use></svg>
+              我也要参与 · 手机上报一次
+            </button>
+          </div>
+        </section>
+      </section>
+
+      <!-- ══════════ 模型 Tab ══════════ -->
+      <section class="view panel" data-panel="models">
+        <div class="panel-head">
+          <span class="panel-kicker">四模型 · 场景应用</span>
+          <h2 class="panel-title">四个场景，各一个专属模型</h2>
+          <p class="panel-sub">统一接入 AEGIS，按场景路由识别与研判</p>
+        </div>
+        <div class="models-tab" id="models-tab-grid"></div>
+        <section class="tab-sec">
+          <h3 class="sec-title">应用链路</h3>
+          <ol class="chain-list" id="models-tab-chain"></ol>
+        </section>
+        <button class="ghost-btn" id="models-full-btn" type="button">
+          <svg class="ic" aria-hidden="true"><use href="#ic-grid"></use></svg>
+          打开完整模型总览
+        </button>
+      </section>
+
+      <!-- ══════════ 参与 Tab ══════════ -->
+      <section class="view panel" data-panel="join">
+        <div class="panel-head">
+          <span class="panel-kicker">观众参与</span>
+          <h2 class="panel-title">选一种方式，加入指挥</h2>
+          <p class="panel-sub">上报、巡逻、答题都能拿积分，冲本场 Top 榜</p>
+        </div>
+
+        <div class="join-entries">
+          <button class="entry-card is-photo" id="entry-photo" type="button">
+            <span class="entry-icon" aria-hidden="true"><svg class="ic"><use href="#ic-camera"></use></svg></span>
+            <span class="entry-copy"><b>拍照上报</b><small>拍一张现场图，四个模型会诊</small></span>
+            <span class="entry-arrow" aria-hidden="true">→</span>
+          </button>
+          <button class="entry-card is-voice" id="entry-voice" type="button">
+            <span class="entry-icon" aria-hidden="true"><svg class="ic"><use href="#ic-mic"></use></svg></span>
+            <span class="entry-copy"><b>语音上报</b><small>按住说话，识别场景与异常</small></span>
+            <span class="entry-arrow" aria-hidden="true">→</span>
+          </button>
+          <button class="entry-card is-ar" id="entry-ar" type="button">
+            <span class="entry-icon" aria-hidden="true"><svg class="ic"><use href="#ic-pin"></use></svg></span>
+            <span class="entry-copy"><b>巡检点打卡</b><small>AR 取景扫描四个巡检点</small></span>
+            <span class="entry-arrow" aria-hidden="true">→</span>
+          </button>
+          <button class="entry-card is-quiz" id="entry-quiz" type="button">
+            <span class="entry-icon" aria-hidden="true"><svg class="ic"><use href="#ic-gift"></use></svg></span>
+            <span class="entry-copy"><b>模型盲盒</b><small>看图识场景，连对拿加成</small></span>
+            <span class="entry-arrow" aria-hidden="true">→</span>
+          </button>
+        </div>
+
+        <section class="battle-card" id="battle-card">
+          <header class="battle-head">
+            <h3 class="sec-title">本场战报</h3>
+            <span class="battle-live"><i aria-hidden="true"></i>实时</span>
+          </header>
+          <div class="battle-grid">
+            <div><b id="battle-participants">0</b><span>参与人数</span></div>
+            <div><b id="battle-reports">0</b><span>上报次数</span></div>
+            <div><b id="battle-fastest">—</b><span>最快处置</span></div>
+          </div>
+          <div class="battle-bars" id="battle-kinds"></div>
+          <div class="battle-scenes" id="battle-scenes"></div>
+        </section>
+
+        <button class="voice-cmd-card" id="entry-voice-cmd" type="button">
+          <span class="voice-cmd-icon" aria-hidden="true"><svg class="ic"><use href="#ic-bolt"></use></svg></span>
+          <span class="entry-copy"><b>语音指挥大屏</b><small>说「切换到小区」「查看战报」</small></span>
+          <span class="entry-arrow" aria-hidden="true">→</span>
+        </button>
+
+        <section class="level-mini" id="level-mini"></section>
+      </section>
+
+      <!-- ══════════ 我的 Tab ══════════ -->
+      <section class="view panel" data-panel="me">
+        <div class="panel-head">
+          <span class="panel-kicker">值班员</span>
+          <h2 class="panel-title">我的</h2>
+          <p class="panel-sub">选择身份、攒积分、看本场排名</p>
+        </div>
+
+        <section class="me-card">
+          <span class="me-avatar" id="me-avatar" aria-hidden="true">A</span>
+          <div class="me-identity">
+            <input class="me-name" id="me-name" maxlength="16" aria-label="昵称" placeholder="给自己起个昵称" />
+            <span class="me-role" id="me-role-label">观众</span>
+          </div>
+          <div class="me-score"><b id="me-score">0</b><span>积分</span></div>
+        </section>
+
+        <section class="me-section">
+          <h3 class="sec-title">值班员身份</h3>
+          <div class="role-grid" id="role-grid">
+            <button class="role-btn" type="button" data-role="guard">安保</button>
+            <button class="role-btn" type="button" data-role="fire">消防</button>
+            <button class="role-btn" type="button" data-role="inspect">巡检</button>
+            <button class="role-btn" type="button" data-role="visitor">观众</button>
+          </div>
+        </section>
+
+        <section class="me-section level-card" id="me-level"></section>
+
+        <section class="me-section me-counters">
+          <div><b id="me-joins">0</b><span>参与次数</span></div>
+          <div><b id="me-reports">0</b><span>上报次数</span></div>
+          <div><b id="me-rank">—</b><span>本场排名</span></div>
+        </section>
+
+        <section class="me-section">
+          <h3 class="sec-title">本场在线 · Top 榜</h3>
+          <p class="me-online" id="me-online">在线 0 人</p>
+          <ol class="me-board" id="me-board"></ol>
+        </section>
+
+        <section class="me-section me-settings">
+          <h3 class="sec-title">终端设置</h3>
+          <button class="me-row" id="me-sound" type="button"><span>提示音</span><b id="me-sound-state">开</b></button>
+          <div class="me-row is-static"><span>连接信息</span><b id="me-conn-info">—</b></div>
+          <div class="me-row is-static"><span>本机编号</span><b id="me-client">—</b></div>
+          <button class="me-row is-danger" id="me-reset" type="button"><span>重置本机数据</span><b>清空</b></button>
+        </section>
+      </section>
+    </div>
+
+    <!-- 预警 Tab 底部的参与 CTA：不遮挡列表，safe-area 由页脚兜底 -->
+    <div class="join-bar">
+      <button class="join-cta" id="join-btn" type="button">
+        <span class="join-cta-icon" aria-hidden="true">
+          <svg class="ic"><use href="#ic-camera"></use></svg>
+        </span>
+        <span class="join-cta-copy">
+          <strong>我要参与 · 上报一次异常</strong>
+          <span>拍一张现场照片，四个模型立即会诊</span>
+        </span>
+        <svg class="ic join-cta-arrow" aria-hidden="true"><use href="#ic-send"></use></svg>
+      </button>
+    </div>
+
+    <footer class="footer">AEGIS 移动指挥终端 · 数据仅用于展台演示</footer>
+
+    <!-- 底部 Tab 导航 -->
+    <nav class="tabbar" id="tabbar" role="tablist" aria-label="主导航">
+      <button class="tab is-active" type="button" role="tab" aria-selected="true" data-tab="alerts">
+        <span class="tab-icon"><svg class="ic" aria-hidden="true"><use href="#ic-shield"></use></svg><i class="tab-dot" id="tab-unread" hidden>0</i></span>
+        <span class="tab-label">预警</span>
+      </button>
+      <button class="tab" type="button" role="tab" aria-selected="false" data-tab="models">
+        <span class="tab-icon"><svg class="ic" aria-hidden="true"><use href="#ic-grid"></use></svg></span>
+        <span class="tab-label">模型</span>
+      </button>
+      <button class="tab" type="button" role="tab" aria-selected="false" data-tab="join">
+        <span class="tab-icon"><svg class="ic" aria-hidden="true"><use href="#ic-camera"></use></svg></span>
+        <span class="tab-label">参与</span>
+      </button>
+      <button class="tab" type="button" role="tab" aria-selected="false" data-tab="me">
+        <span class="tab-icon"><svg class="ic" aria-hidden="true"><use href="#ic-user"></use></svg></span>
+        <span class="tab-label">我的</span>
+      </button>
+    </nav>
+
+    <!-- 新预警 toast：容器常驻 aria-live，脚本只往里追加节点 -->
+    <div class="toast-stack" id="toast-stack" aria-live="polite" aria-atomic="false"></div>
+
+    <!-- 详情抽屉：backdrop + 上滑面板，内容就地替换不重建面板 -->
+    <div class="sheet" id="sheet" hidden>
+      <div class="sheet-backdrop" data-sheet-close aria-hidden="true"></div>
+      <div class="sheet-panel" id="sheet-panel" role="dialog" aria-modal="true" aria-labelledby="sheet-title">
+        <div class="sheet-grip" id="sheet-grip" aria-hidden="true"><span></span></div>
+        <header class="sheet-head">
+          <span class="sheet-icon" id="sheet-icon">
+            <svg class="ic" aria-hidden="true"><use id="sheet-icon-use" href="#ic-fire"></use></svg>
+          </span>
+          <div class="sheet-titles">
+            <h2 class="sheet-title" id="sheet-title">预警详情</h2>
+            <p class="sheet-sub" id="sheet-sub">异常详情</p>
+          </div>
+          <span class="pill tone-info" id="sheet-pill">待派单</span>
+        </header>
+        <div class="sheet-body" id="sheet-body">
+          <!-- 观众上报来源行：普通预警不显示，visitor 卡片才出现 -->
+          <div class="sheet-visitor" id="sheet-visitor" hidden>
+            <svg class="ic" aria-hidden="true"><use href="#ic-camera"></use></svg>
+            <span>来源：观众上报（手机拍摄）</span>
+          </div>
+
+          <!-- 现场回传：机器狗第一视角（仅 visitor 预警） -->
+          <div class="sheet-live" id="sheet-live" hidden>
+            <header class="sheet-live-head">
+              <span class="sheet-live-dot" aria-hidden="true"></span>
+              <span>机器狗第一视角 · 现场回传</span>
+              <time id="live-time"></time>
+            </header>
+            <div class="sheet-live-frame">
+              <img id="live-frame" alt="机器狗第一视角回传画面" hidden />
+              <div class="sheet-live-empty" id="live-empty">等待机器狗到场回传…</div>
+            </div>
+            <p class="sheet-live-meta" id="live-meta">等待机器狗到场回传…</p>
+          </div>
+
+          <div class="info-grid" id="sheet-info"></div>
+
+          <!-- 四模型接入：当前场景的模型标「主判」，其余标「已接入」 -->
+          <section class="sheet-sec" aria-label="四模型接入">
+            <h3 class="section-title">四模型接入</h3>
+            <div class="model-chips" id="sheet-models"></div>
+          </section>
+
+          <!-- 应用链路：模型识别 → 风险研判 → 就近调度 → 移动触达 -->
+          <section class="sheet-sec" aria-label="模型应用链路">
+            <h3 class="section-title">应用链路</h3>
+            <ol class="chain-steps" id="sheet-chain"></ol>
+          </section>
+
+          <!-- 模型研判：置信度 + 识别来源 / 研判理由 / 处置建议 -->
+          <section class="sheet-sec" aria-label="模型研判">
+            <h3 class="section-title">模型研判</h3>
+            <div class="analysis-card" id="sheet-analysis">
+              <div class="analysis-head">
+                <span class="analysis-label">模型置信度</span>
+                <span class="analysis-conf" id="analysis-confidence">—</span>
+              </div>
+              <div class="analysis-bar" aria-hidden="true"><i id="analysis-fill"></i></div>
+              <dl class="analysis-rows" id="analysis-rows"></dl>
+            </div>
+          </section>
+
+          <section class="timeline-wrap" aria-label="处置时间线">
+            <h3 class="section-title">处置时间线</h3>
+            <ol class="timeline" id="sheet-timeline"></ol>
+          </section>
+        </div>
+        <footer class="sheet-foot">
+          <button class="btn-close" id="sheet-close" type="button">关闭</button>
+        </footer>
+      </div>
+    </div>
+
+    <!-- 四大模型应用总览：全屏浮层，四张模型卡 + 应用链路 + 演示声明 -->
+    <div class="models" id="models" hidden>
+      <div class="models-backdrop" data-models-close aria-hidden="true"></div>
+      <section class="models-panel" id="models-panel" role="dialog" aria-modal="true" aria-labelledby="models-title">
+        <header class="models-head">
+          <div class="models-heading">
+            <h2 class="models-title" id="models-title">四大模型应用总览</h2>
+            <p class="models-sub">四个场景各一个专属模型 · 统一接入指挥中枢</p>
+          </div>
+          <button class="icon-btn" id="models-close" type="button" aria-label="关闭模型总览">
+            <svg class="ic" aria-hidden="true"><use href="#ic-close"></use></svg>
+          </button>
+        </header>
+        <div class="models-body">
+          <div class="models-grid" id="models-grid"></div>
+          <section class="models-chain-sec" aria-label="模型应用链路">
+            <h3 class="section-title">应用链路</h3>
+            <ol class="chain-list" id="models-chain"></ol>
+          </section>
+          <p class="models-note">展台演示：模型输出为模拟，接入真实模型后由接口替换</p>
+        </div>
+      </section>
+    </div>
+
+    <!-- 观众参与浮层：选场景 → 拍照（仅本机预览）→ 四模型会诊 → 一键上报 -->
+    <div class="join" id="join" hidden>
+      <div class="join-backdrop" data-join-close aria-hidden="true"></div>
+      <section class="join-panel" id="join-panel" role="dialog" aria-modal="true" aria-labelledby="join-title">
+        <header class="join-head">
+          <div class="join-heading">
+            <span class="join-kicker">观众参与 · 手机上报</span>
+            <h2 class="join-title" id="join-title">拍一张，让四个模型会诊</h2>
+            <p class="join-sub">照片只在本机预览，不会上传到服务器</p>
+          </div>
+          <button class="icon-btn" id="join-close" type="button" aria-label="关闭参与流程">
+            <svg class="ic" aria-hidden="true"><use href="#ic-close"></use></svg>
+          </button>
+        </header>
+        <div class="join-body" id="join-body">
+          <section class="join-sec">
+            <h3 class="join-step-title"><span class="join-step-num">1</span>选一个场景</h3>
+            <div class="join-scenes" id="join-scenes"></div>
+            <p class="join-hint" id="join-scene-hint">默认跟随当前大屏场景，上报后大屏会切到这个场景出警。</p>
+          </section>
+
+          <section class="join-sec">
+            <h3 class="join-step-title"><span class="join-step-num">2</span>拍下你看到的现场</h3>
+            <div class="join-photo-wrap" id="join-photo-wrap">
+              <div class="join-photo-empty" id="join-photo-empty">
+                <svg class="ic" aria-hidden="true"><use href="#ic-camera"></use></svg>
+                <p>拍一张现场照片，或直接用演示照片</p>
+              </div>
+              <img class="join-preview" id="join-preview" alt="观众拍摄的现场照片预览" hidden />
+              <div class="join-scan" id="join-scan" hidden aria-hidden="true"></div>
+              <div class="join-boxes" id="join-boxes" hidden aria-hidden="true">
+                <span class="join-box" data-box="1"><i></i><em id="join-box-label-1"></em></span>
+                <span class="join-box" data-box="2"><i></i><em id="join-box-label-2"></em></span>
+              </div>
+            </div>
+            <div class="join-photo-actions">
+              <label class="join-photo-btn" for="join-photo">
+                <svg class="ic" aria-hidden="true"><use href="#ic-camera"></use></svg>
+                拍一张 / 选照片
+              </label>
+              <input class="join-file" id="join-photo" type="file" accept="image/*" capture="environment" />
+              <button class="join-photo-btn is-ghost" id="join-sample" type="button">用演示照片</button>
+            </div>
+            <p class="join-hint">照片仅在本机预览、不上传；演示照片由浏览器本地生成。</p>
+          </section>
+
+          <section class="join-sec">
+            <h3 class="join-step-title"><span class="join-step-num">3</span>让四个模型看一看</h3>
+            <button class="join-analyze" id="join-analyze" type="button" disabled>
+              <svg class="ic" aria-hidden="true"><use href="#ic-grid"></use></svg>
+              <span class="join-analyze-text">让四个模型看一看</span>
+            </button>
+            <div class="join-model-rows" id="join-model-rows" hidden></div>
+            <div class="join-result" id="join-result" hidden>
+              <div class="join-result-head">
+                <span class="join-result-caption">会诊结论</span>
+                <span class="join-result-kind" id="join-result-kind">明火</span>
+                <span class="join-result-conf" id="join-confidence">—</span>
+              </div>
+              <dl class="join-result-rows" id="join-result-rows"></dl>
+            </div>
+            <p class="join-status" id="join-status" role="status" aria-live="polite"></p>
+            <button class="join-submit" id="join-submit" type="button" hidden>
+              <svg class="ic" aria-hidden="true"><use href="#ic-send"></use></svg>
+              <span id="join-submit-text">一键上报指挥中心</span>
+            </button>
+          </section>
+        </div>
+      </section>
+    </div>
+
+    <!-- 语音上报 / 语音指挥大屏 -->
+    <div class="voice" id="voice" hidden>
+      <div class="voice-backdrop" data-voice-close aria-hidden="true"></div>
+      <section class="voice-panel" role="dialog" aria-modal="true" aria-labelledby="voice-title">
+        <header class="ov-head">
+          <div>
+            <span class="ov-kicker" id="voice-kicker">语音上报</span>
+            <h2 class="ov-title" id="voice-title">按住说话，AI 帮你上报</h2>
+            <p class="ov-sub" id="voice-sub">说一句「校园发现明火」，自动识别场景与异常</p>
+          </div>
+          <button class="icon-btn" id="voice-close" type="button" aria-label="关闭语音上报">
+            <svg class="ic" aria-hidden="true"><use href="#ic-close"></use></svg>
+          </button>
+        </header>
+        <div class="voice-body">
+          <div class="voice-orb" id="voice-orb" aria-hidden="true"><svg class="ic"><use href="#ic-mic"></use></svg></div>
+          <button class="voice-hold" id="voice-hold" type="button">按住说话</button>
+          <p class="voice-hint" id="voice-hint">按住不放，松手识别；没有语音服务时自动使用模拟识别</p>
+          <div class="voice-transcript" id="voice-transcript" hidden>
+            <span class="voice-wave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span>
+            <p id="voice-text"></p>
+          </div>
+          <div class="voice-result" id="voice-result" hidden>
+            <div class="voice-result-head">
+              <span class="voice-result-kind" id="voice-result-kind">—</span>
+              <span class="voice-result-conf" id="voice-result-conf">—</span>
+            </div>
+            <dl class="voice-result-rows" id="voice-result-rows"></dl>
+          </div>
+          <p class="voice-status" id="voice-status" role="status" aria-live="polite"></p>
+          <button class="voice-submit" id="voice-submit" type="button" hidden>
+            <svg class="ic" aria-hidden="true"><use href="#ic-send"></use></svg>
+            <span id="voice-submit-text">一键上报</span>
+          </button>
+        </div>
+      </section>
+    </div>
+
+    <!-- AR 巡检点打卡 -->
+    <div class="ar" id="ar" hidden>
+      <div class="ar-backdrop" data-ar-close aria-hidden="true"></div>
+      <section class="ar-panel" role="dialog" aria-modal="true" aria-labelledby="ar-title">
+        <header class="ov-head">
+          <div>
+            <span class="ov-kicker">AR 巡检</span>
+            <h2 class="ov-title" id="ar-title">巡检点打卡</h2>
+            <p class="ov-sub">点击取景框里的巡检点，开始一次现场扫描</p>
+          </div>
+          <button class="icon-btn" id="ar-close" type="button" aria-label="关闭巡检">
+            <svg class="ic" aria-hidden="true"><use href="#ic-close"></use></svg>
+          </button>
+        </header>
+        <div class="ar-body">
+          <div class="ar-view">
+            <div class="ar-grid" aria-hidden="true"></div>
+            <div class="ar-frame" aria-hidden="true"></div>
+            <div class="ar-markers" id="ar-markers">
+              <button class="ar-marker" type="button" data-ar-checkpoint="campus" style="--x: 24%; --y: 30%">校园</button>
+              <button class="ar-marker" type="button" data-ar-checkpoint="community" style="--x: 68%; --y: 24%">小区</button>
+              <button class="ar-marker" type="button" data-ar-checkpoint="subway" style="--x: 30%; --y: 68%">地铁</button>
+              <button class="ar-marker" type="button" data-ar-checkpoint="forest" style="--x: 72%; --y: 64%">森林</button>
+            </div>
+            <div class="ar-scan" id="ar-scan" hidden>
+              <i id="ar-scan-fill"></i>
+              <span id="ar-scan-text">扫描中…</span>
+            </div>
+          </div>
+          <p class="ar-hint" id="ar-hint">选择一个巡检点开始扫描</p>
+          <div class="ar-result" id="ar-result" hidden>
+            <div class="ar-result-head">
+              <span id="ar-result-title">巡检结果</span>
+              <span id="ar-result-conf"></span>
+            </div>
+            <p class="ar-result-text" id="ar-result-text"></p>
+            <div class="ar-result-actions">
+              <button class="ar-rescan" id="ar-rescan" type="button">重新扫描</button>
+              <button class="ar-submit" id="ar-submit" type="button" hidden>上报这条异常</button>
+            </div>
+          </div>
+          <p class="ar-status" id="ar-status" role="status" aria-live="polite"></p>
+        </div>
+      </section>
+    </div>
+
+    <!-- 模型盲盒（quiz） -->
+    <div class="quiz" id="quiz" hidden>
+      <div class="quiz-backdrop" data-quiz-close aria-hidden="true"></div>
+      <section class="quiz-panel" role="dialog" aria-modal="true" aria-labelledby="quiz-title">
+        <header class="ov-head">
+          <div>
+            <span class="ov-kicker">模型盲盒</span>
+            <h2 class="ov-title" id="quiz-title">看图识场景</h2>
+            <p class="ov-sub">5 轮盲盒 · 答对 +10 分，连对还有 +5 加成</p>
+          </div>
+          <button class="icon-btn" id="quiz-close" type="button" aria-label="关闭模型盲盒">
+            <svg class="ic" aria-hidden="true"><use href="#ic-close"></use></svg>
+          </button>
+        </header>
+        <div class="quiz-body">
+          <div class="quiz-top">
+            <span class="quiz-step" id="quiz-step">第 1 / 5 轮</span>
+            <span class="quiz-scorebar">本局 <b id="quiz-score">0</b> 分 · 连对 <b id="quiz-streak">0</b></span>
+          </div>
+          <img class="quiz-image" id="quiz-image" alt="模型盲盒现场图（本地生成）" />
+          <h3 class="quiz-question" id="quiz-question">这张现场图属于哪个场景？</h3>
+          <div class="quiz-options" id="quiz-options"></div>
+          <div class="quiz-reveal" id="quiz-reveal" hidden></div>
+          <p class="quiz-status" id="quiz-status" role="status" aria-live="polite"></p>
+          <div class="quiz-result" id="quiz-result" hidden>
+            <h3>盲盒通关</h3>
+            <p>本局得分 <b id="quiz-final-score">0</b> · 最高连对 <b id="quiz-best-streak">0</b></p>
+            <button class="quiz-rank" id="quiz-rank" type="button">登记上榜</button>
+            <button class="quiz-replay" id="quiz-replay" type="button">再玩一次</button>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <script type="module" src="./src/mobile/main.js"></script>
+</body>
+</html>

@@ -24,6 +24,15 @@
 | `_follow.mjs` | 设备跟随：按 `1` 跟第一台，截图看主画面与小窗 |
 | `_tabs.mjs` | 校园与小区页签切换：确认只有一个场景根节点、机位确实变了 |
 | `_life_probe.mjs` | 行人数量与走动、情景道具落点 |
+| `_alert_bus_probe.mjs` | 大屏五段生命周期是否完整、同 id、按序推到本机总线 |
+| `_mobile_probe.mjs` | 手机预警页：实时链路、统计/筛选/详情/未读、演示模式 |
+| `_phone_link_probe.mjs` | 大屏「手机」入口：二维码生成、局域网地址可达性 |
+| `_e2e_phone_probe.mjs` | 端到端：大屏真实报警 → 手机页收到 → 处置闭环 |
+| `_model_bar_probe.mjs` | 四模型场景应用：大屏模型条切换、页签 tooltip、场景本地化异常名 |
+| `_visitor_bus_probe.mjs` | 观众上报总线协议：big-screen / fallback 两种模式与定时器清理 |
+| `_visitor_probe.mjs` | 观众上报端到端：手机会诊上报 → 大屏切场景出警 → 手机观众上报卡片闭环 |
+| `_phone_v3_probe.mjs` | AEGIS 手机重设计：四 Tab、语音/AR/盲盒/我的/现场回传、320 适配 |
+| `_bigscreen_session_probe.mjs` | 大屏会话：在线值班员、本场战报、语音指挥、跟随回传帧 |
 
 ## 一次性探针
 
@@ -32,6 +41,11 @@
 `_all4.mjs`（四场景各一张）、`_wide.mjs`、`_closeup.mjs`（任意机位）、`_map_probe.mjs`（地图俯视）、`probe_top.mjs`（俯视快照 PNG）、`_probe_conn.mjs`（西北连体楼）、`_probe_forest.mjs`、`_probe_hill.mjs`、`_probe_robots.mjs`、`_train_probe.mjs`、`_train_probe2.mjs`。
 
 ## 注意
+
+- `_visitor_bus_probe` 的 fallback 用例假设总线上没有大屏订阅者；如果开发服开着大屏页/其他浏览器在看，
+  这些用例会误报。跑之前先关掉其它页面，或看脚本输出里的 SKIP 提示。
+- `npm run dev` 下总线是**会话内存**：`POST /api/alerts/reset` 只清服务端（事件/值班员/战报/帧/兜底定时器），
+  已经打开的页面需要刷新才能看到归零。
 
 - 无头软件渲染只有 1~5 fps，仿真时间每帧最多累加 0.05 秒，等墙钟推不动仿真。涉及时间的验收要直接改 `__app.engine.time` 或 `__cine` 上的时间字段。
 - `shot.mjs` 用 `networkidle2` 会等不到空闲，改用 `_smoke.mjs` 的固定等待写法。

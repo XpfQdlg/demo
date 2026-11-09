@@ -180,14 +180,17 @@ export class Monitor {
    * @param agents     robots.js 给出的设备数组，读写 status / task
    * @param floor_y    地面高度，地铁站台是 0.9 米
    * @param make_prop  (kind, px, seed) => Object3D，由 life.js 提供
+   * @param kind_names 可选，异常类型在各场景的叫法（森林的 fire 叫「火险烟雾」等），
+   *                   不给就用通用名。四个场景模型的口径在 mobile/contract.js
    * @param hooks      回调：on_alarm / on_dispatched / on_arrive / on_handling / on_resolve
    */
-  constructor({ root, scene, agents, floor_y = 0, make_prop, hooks = {} }) {
+  constructor({ root, scene, agents, floor_y = 0, make_prop, kind_names = null, hooks = {} }) {
     this.root = root;
     this.scene = scene;
     this.agents = agents || [];
     this.floor_y = floor_y;
     this.make_prop = make_prop;
+    this.kind_names = kind_names;
     this.hooks = hooks;
 
     this.cameras = [];
@@ -201,6 +204,9 @@ export class Monitor {
     this.time = 0;
     this.round = 0;
     this.timers = [];
+    /* 观众上报用的道具按类型复用：make_prop 会给火焰/烟柱注册逐帧 ticker，
+       每次上报都新建会越攒越多，复用一套、每轮只改位置与显隐 */
+    this.visitor_props = new Map();
   }
 
   /* ── 建点位 ──────────────────────────────────────────────────────── */
@@ -366,7 +372,9 @@ export class Monitor {
     const inc = {
       idx: i,
       kind,
-      name: KIND_NAME[kind],
+      /* 同一个 fire/crowd/trash，在森林叫「火险烟雾」、在地铁叫「通道遗留物」，
+         大屏与手机看到的名称一致，讲解时不会串场 */
+      name: this.kind_names?.[kind] || KIND_NAME[kind],
       area: area_of(inc_px, this.scene),
       px: inc_px,
       camera: cam,
@@ -553,6 +561,97 @@ export class Monitor {
     this.hooks.on_manual_arrive?.({ agent });
   }
 
+  /**
+   * 观众上报：在监控层里生成一起「观众上报」异常，立即报警并走就近派单。
+   *
+   * 与 3 个摄像头点位的自动报警共用同一套状态机与回调，所以大屏气泡、
+   * 事件流、手机预警都能照常收到；区别只有 inc.visitor=true 和处置完成后
+   * 从 incidents 里摘掉，不参与 45 秒一轮的循环重开。
+   *
+   * 3D 道具按类型复用（见 visitor_props）：火焰/烟柱不能反复创建。
+   *
+   * @param kind        异常类型 fire/crowd/trash
+   * @param command_id  手机上报指令 id，会带进事件里用于去重
+   * @returns {object|null} 成功返回 incident；现场没有可用监控点位时返回 null
+   */
+  trigger_visitor_report({ kind = "fire", command_id = null } = {}) {
+    if (!this.cameras.length) return null;
+    const safe_kind = KINDS.includes(kind) ? kind : "fire";
+
+    const nav = nav_for(this.scene, "all");
+    /* 展台上观众上报后，机器狗最好十几二十米就赶到，不能派到场地另一头
+       跑两分钟。做法：先选一个「正在摄像头覆盖区内巡检」的空闲执行体，
+       在它身边 20 像素内找一个可行走点当上报点，再把最近的摄像头作为画面来源。
+       没有空闲执行体时退回摄像头附近的上报点。 */
+    const idle = this.agents.filter((a) => a.status === "idle" && !a.task);
+    let px = null;
+    if (idle.length) {
+      let best_agent = idle[0];
+      let best_cam_dist = Infinity;
+      for (const agent of idle) {
+        for (const cam of this.cameras) {
+          const d = Math.hypot(agent.x - cam.px[0], agent.y - cam.px[1]);
+          if (d < best_cam_dist) {
+            best_cam_dist = d;
+            best_agent = agent;
+          }
+        }
+      }
+      px = nav ? this._near(nav, [best_agent.x, best_agent.y], 20) : [best_agent.x, best_agent.y];
+    }
+    if (!px) {
+      const anchor_px = this.cameras[0].px;
+      px = nav ? this._near(nav, anchor_px, 20) : anchor_px;
+    }
+    const w = px_to_world(px[0], px[1]);
+
+    /* 最近的摄像头作为这次上报的「画面来源」 */
+    let camera = this.cameras[0];
+    let best = Infinity;
+    for (const cam of this.cameras) {
+      const d = Math.hypot(cam.px[0] - px[0], cam.px[1] - px[1]);
+      if (d < best) {
+        best = d;
+        camera = cam;
+      }
+    }
+
+    let prop = this.visitor_props.get(safe_kind);
+    if (!prop) {
+      prop = this.make_prop(safe_kind, px, 900);
+      prop.position.y = this.floor_y;
+      this.group.add(prop);
+      this.visitor_props.set(safe_kind, prop);
+    }
+    prop.position.set(w.x, this.floor_y, w.z);
+    prop.visible = true;
+
+    const inc = {
+      idx: this.incidents.length + 900,
+      kind: safe_kind,
+      /* 与自动报警同一套场景本地化名：地铁的 trash 叫「通道遗留物」 */
+      name: this.kind_names?.[safe_kind] || KIND_NAME[safe_kind],
+      area: area_of(px, this.scene),
+      px,
+      camera,
+      prop,
+      ring: null,
+      status: "wait",
+      fired: false,
+      by: null,
+      distance_m: 0,
+      eta_s: 0,
+      visitor: true,
+      /* 指挥流指令 id：总线用它判断「这条上报是否已经被大屏处理」，
+         避免大屏响应超时后兜底与真出警各出一张卡 */
+      command_id: command_id || null,
+    };
+    this.incidents.push(inc);
+    this._ring(inc, true);
+    this._alarm(inc);
+    return inc;
+  }
+
   _try_dispatch(inc) {
     const best = this._nearest_idle(inc.px);
 
@@ -615,6 +714,14 @@ export class Monitor {
     agent.entity.setStatus?.(0x43e0ff);
 
     this.hooks.on_resolve?.({ inc, agent });
+
+    /* 观众上报是一次性事件：闭环后摘出列表，不参与后续循环重开。
+       道具按类型留着复用，不能销毁（ticker 注销不了）。 */
+    if (inc.visitor) {
+      const index = this.incidents.indexOf(inc);
+      if (index >= 0) this.incidents.splice(index, 1);
+      if (inc.ring) inc.ring.visible = false;
+    }
   }
 
   /** 一轮全部处置完，过一会儿重开：道具复位，但设备不动，接着巡检 */

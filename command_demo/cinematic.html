@@ -173,12 +173,376 @@
   .feed-row.ok { color: #bdffd8; }
 
   /* H 键：把面板收起来，只剩画面，接大屏时用 */
-  body.clean #agents, body.clean #feed, body.clean #tip { display: none; }
+  body.clean #agents, body.clean #feed, body.clean #tip, body.clean #modelBar, body.clean #visitorToast { display: none; }
+
+  /* ── 四模型场景条 ───────────────────────────────────────────────────
+     四个场景各一个专属模型。切页签时这条跟着换，讲解时一眼能说出
+     「现在演示的是哪个模型、它覆盖什么」；颜色用各模型的主题色。 */
+  #modelBar {
+    position: fixed; left: 50%; top: 70px; transform: translateX(-50%);
+    display: flex; align-items: center; gap: 8px;
+    padding: 6px 14px; border-radius: 999px;
+    background: rgba(10, 16, 24, .55);
+    border: 1px solid rgba(140, 180, 220, .16);
+    backdrop-filter: blur(8px);
+    font: 12px/1 "Microsoft YaHei", system-ui, sans-serif;
+    letter-spacing: .05em; white-space: nowrap;
+    color: rgba(200, 216, 232, .72);
+    z-index: 9; pointer-events: none;
+    transition: border-color .3s ease;
+  }
+  #modelBar b { color: var(--model-accent, #8fe3ff); font-weight: 600; }
+  #modelBar .m-dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--model-accent, #43e0ff);
+    box-shadow: 0 0 8px var(--model-accent, #43e0ff);
+  }
+  #modelBar .m-sep { color: rgba(150, 180, 210, .38); }
+
+  /* ── 观众上报：四模型会诊动效 ──────────────────────────────────────
+     手机上报后大屏先演一段「四个模型一起看这张图」，再真的切场景出警。
+     这是展台互动最容易被围观的一段，文案和节奏都按现场可读性给。 */
+  #visitorToast {
+    position: fixed; left: 50%; top: 116px;
+    width: min(560px, calc(100vw - 48px));
+    padding: 16px 20px 14px;
+    background: linear-gradient(180deg, rgba(30, 22, 12, .96), rgba(11, 14, 20, .97));
+    border: 1px solid rgba(255, 196, 92, .5);
+    border-radius: 14px;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, .55), 0 0 40px rgba(255, 190, 80, .12);
+    color: #ffe9c4; font: 13px/1.5 "Microsoft YaHei", system-ui, sans-serif;
+    z-index: 30; opacity: 0; pointer-events: none;
+    transform: translateX(-50%) translateY(-12px);
+    transition: opacity .3s ease, transform .3s ease;
+  }
+  #visitorToast.on { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .v-head {
+    display: flex; align-items: baseline; gap: 10px;
+    padding-bottom: 8px; border-bottom: 1px solid rgba(255, 196, 92, .18);
+  }
+  .v-kicker { font-size: 10px; letter-spacing: .22em; color: rgba(255, 196, 92, .65); }
+  #visitorTitle { font-size: 16px; font-weight: 600; color: #fff3dc; }
+  .v-scene {
+    margin-left: auto; padding: 2px 8px; border-radius: 999px;
+    font-size: 11px; color: #ffd489;
+    border: 1px solid rgba(255, 196, 92, .35);
+  }
+  .v-rows { list-style: none; margin: 10px 0 8px; display: grid; gap: 5px; }
+  .v-row {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 12px; color: rgba(230, 240, 250, .82);
+    opacity: 0; transform: translateX(-6px);
+    transition: opacity .25s ease, transform .25s ease;
+  }
+  .v-row.on { opacity: 1; transform: none; }
+  .v-row .v-dot {
+    width: 7px; height: 7px; border-radius: 50%; flex: none;
+    background: var(--row-accent, #ffc45c);
+    box-shadow: 0 0 8px var(--row-accent, #ffc45c);
+  }
+  .v-row.is-main { color: #ffe6b8; font-weight: 600; }
+  .v-row .v-tag {
+    margin-left: auto; padding: 1px 7px; border-radius: 999px;
+    font-size: 10px; color: #ffcf7d;
+    border: 1px solid rgba(255, 196, 92, .3);
+  }
+  .v-verdict {
+    margin-top: 6px; padding-top: 8px;
+    border-top: 1px dashed rgba(255, 196, 92, .16);
+    font-size: 12px; letter-spacing: .03em; color: #ffd489;
+  }
+  .v-verdict.pulse { animation: vpulse 1.2s ease-in-out infinite; }
+  @keyframes vpulse { 50% { opacity: .5; } }
+  #visitorCount { color: #ffcf7d; }
+
+  /* ── 手机入口：二维码弹层 ──────────────────────────────────────────
+     讲解时点右上角「手机」，手机扫码打开预警接收页。弹层压暗背景，
+     二维码保持白底，暗色环境下扫得出来。 */
+  #phoneBtn { color: #8fe3ff; }
+  #phoneBtn:hover { background: rgba(67, 224, 255, .16); color: #d9f7ff; }
+
+  #phonePanel {
+    position: fixed; inset: 0; z-index: 40;
+    display: none; place-items: center;
+    background: rgba(4, 8, 12, .62); backdrop-filter: blur(10px);
+  }
+  #phonePanel.on { display: grid; }
+
+  .phone-card {
+    position: relative;
+    width: min(420px, calc(100vw - 40px));
+    padding: 26px 26px 22px;
+    background: linear-gradient(180deg, rgba(17, 27, 38, .98), rgba(9, 14, 20, .98));
+    border: 1px solid rgba(140, 190, 235, .22);
+    border-radius: 18px;
+    box-shadow: 0 30px 80px rgba(0, 0, 0, .55);
+    color: #d6e5f4;
+    font: 13px/1.7 "Microsoft YaHei", system-ui, sans-serif;
+    text-align: center;
+  }
+  .phone-card .kicker {
+    font-size: 11px; letter-spacing: .22em;
+    color: rgba(120, 200, 255, .7); margin-bottom: 6px;
+  }
+  .phone-card h2 {
+    font-size: 20px; font-weight: 600; letter-spacing: .06em;
+    color: #eaf5ff; margin-bottom: 6px;
+  }
+  .phone-card .sub { font-size: 12px; color: rgba(180, 202, 225, .66); margin-bottom: 18px; }
+  #phoneQR {
+    width: 216px; height: 216px; margin: 0 auto 16px;
+    padding: 10px; display: grid; place-items: center;
+    background: #fff; border-radius: 12px;
+  }
+  #phoneQR:empty { display: none; }
+  #phoneQR svg { width: 100%; height: 100%; display: block; }
+  .phone-url { display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 10px; }
+  .phone-url code {
+    max-width: 100%; padding: 7px 10px; border-radius: 8px;
+    background: rgba(60, 140, 200, .12);
+    border: 1px solid rgba(90, 170, 230, .22);
+    font: 12px/1 ui-monospace, Consolas, monospace; color: #8fe3ff;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .phone-url button {
+    flex: none; padding: 7px 12px; border-radius: 8px; cursor: pointer;
+    border: 1px solid rgba(90, 170, 230, .3);
+    background: rgba(60, 140, 200, .16); color: #cbeeff;
+    font: 12px/1 "Microsoft YaHei", system-ui, sans-serif;
+  }
+  .phone-url button:disabled { opacity: .45; cursor: default; }
+  .phone-hint { font-size: 11px; line-height: 1.7; color: rgba(160, 190, 220, .55); margin-top: 4px; }
+  #phoneClose {
+    position: absolute; top: 10px; right: 12px;
+    width: 32px; height: 32px; border: 0; border-radius: 8px;
+    background: transparent; color: rgba(180, 210, 240, .6);
+    font-size: 20px; line-height: 1; cursor: pointer;
+  }
+  #phoneClose:hover { background: rgba(90, 140, 200, .18); color: #eaf4ff; }
+  body.phone-open #tip, body.phone-open #credit { opacity: 0; }
+
+  /* ══════════════════════════════════════════════════════════════════
+     AEGIS 大屏皮肤 v3：深空底 + 极光青/紫 + 暖琥珀，跟手机端同一套语言
+     ══════════════════════════════════════════════════════════════════ */
+  :root {
+    --aegis-cyan: #4ef0ff;
+    --aegis-violet: #8b7bff;
+    --aegis-amber: #ffb347;
+    --aegis-pink: #ff5fa2;
+    --aegis-glass: rgba(9, 15, 24, .62);
+    --aegis-line: rgba(120, 200, 255, .2);
+  }
+  body {
+    background:
+      radial-gradient(1200px 700px at 15% -10%, rgba(78, 240, 255, .08), transparent 60%),
+      radial-gradient(900px 600px at 90% 110%, rgba(139, 123, 255, .1), transparent 60%),
+      #05070d;
+  }
+  #tabs, #quality, #agents, #feed, #modelBar, #credit, #crowdBar {
+    -webkit-backdrop-filter: blur(14px);
+    backdrop-filter: blur(14px);
+  }
+  #tabs {
+    background: linear-gradient(180deg, rgba(12, 20, 32, .78), rgba(7, 11, 18, .7));
+    border: 1px solid var(--aegis-line);
+    border-radius: 999px;
+    padding: 5px;
+    box-shadow: 0 10px 34px rgba(0, 0, 0, .4), inset 0 1px 0 rgba(255, 255, 255, .04);
+  }
+  .tab {
+    border-radius: 999px;
+    padding: 8px 20px;
+    letter-spacing: .12em;
+  }
+  .tab.on {
+    background: linear-gradient(135deg, rgba(78, 240, 255, .22), rgba(139, 123, 255, .22));
+    color: #eaffff;
+    box-shadow: inset 0 0 0 1px rgba(78, 240, 255, .32), 0 0 18px rgba(78, 240, 255, .14);
+  }
+  #quality {
+    background: linear-gradient(180deg, rgba(12, 20, 32, .78), rgba(7, 11, 18, .7));
+    border: 1px solid var(--aegis-line);
+    border-radius: 999px;
+    padding: 5px;
+    box-shadow: 0 10px 34px rgba(0, 0, 0, .4);
+  }
+  #quality .q { border-radius: 999px; padding: 7px 13px; }
+  #quality .q.on {
+    background: linear-gradient(135deg, rgba(78, 240, 255, .2), rgba(139, 123, 255, .18));
+    color: #eaffff;
+  }
+  #battleBtn {
+    color: var(--aegis-amber);
+  }
+  #battleBtn:hover { background: rgba(255, 179, 71, .16); color: #ffe6b8; }
+  #modelBar {
+    background: linear-gradient(180deg, rgba(10, 17, 27, .78), rgba(6, 10, 16, .7));
+    border: 1px solid var(--aegis-line);
+    border-radius: 999px;
+    box-shadow: 0 8px 28px rgba(0, 0, 0, .35);
+  }
+  #modelBar .m-dot { box-shadow: 0 0 12px var(--model-accent, #4ef0ff); }
+  #agents, #feed {
+    background: linear-gradient(180deg, rgba(10, 17, 27, .68), rgba(6, 10, 16, .62));
+    border: 1px solid var(--aegis-line);
+    border-radius: 14px;
+    box-shadow: 0 14px 40px rgba(0, 0, 0, .38);
+  }
+  .panel-h {
+    border-bottom: 1px solid rgba(120, 200, 255, .12);
+    letter-spacing: .14em;
+  }
+  .agent-row.on {
+    background: linear-gradient(90deg, rgba(78, 240, 255, .2), rgba(139, 123, 255, .12));
+    box-shadow: inset 0 0 0 1px rgba(78, 240, 255, .24);
+  }
+  #tip { letter-spacing: .08em; }
+  #credit { opacity: .55; }
+
+  /* 在线值班员 */
+  #crowdBar {
+    position: fixed; left: 22px; top: 22px; z-index: 9;
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 14px;
+    background: linear-gradient(180deg, rgba(12, 20, 32, .78), rgba(7, 11, 18, .7));
+    border: 1px solid var(--aegis-line);
+    border-radius: 999px;
+    font: 12px/1 "Microsoft YaHei", system-ui, sans-serif;
+    color: rgba(200, 220, 240, .68);
+    letter-spacing: .08em;
+    box-shadow: 0 10px 34px rgba(0, 0, 0, .38);
+    pointer-events: none;
+  }
+  #crowdBar b {
+    font-size: 17px; color: #eaffff; font-weight: 650;
+    font-variant-numeric: tabular-nums;
+    text-shadow: 0 0 14px rgba(78, 240, 255, .5);
+  }
+  .crowd-kicker { font-size: 10px; letter-spacing: .2em; color: rgba(120, 200, 255, .55); }
+  .crowd-avatars { display: flex; gap: 4px; margin-left: 2px; }
+  .crowd-avatars i {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--role-color, var(--aegis-cyan));
+    box-shadow: 0 0 8px var(--role-color, var(--aegis-cyan));
+    opacity: .85;
+  }
+  body.clean #crowdBar, body.clean #voiceCmdToast, body.clean #battlePanel { display: none; }
+
+  /* 语音指令提示 */
+  #voiceCmdToast {
+    position: fixed; left: 50%; bottom: 150px; transform: translateX(-50%) translateY(10px);
+    padding: 10px 20px; border-radius: 999px;
+    background: linear-gradient(135deg, rgba(78, 240, 255, .16), rgba(139, 123, 255, .2));
+    border: 1px solid rgba(78, 240, 255, .38);
+    box-shadow: 0 14px 40px rgba(0, 0, 0, .45), 0 0 26px rgba(78, 240, 255, .12);
+    color: #eaffff;
+    font: 14px/1.35 "Microsoft YaHei", system-ui, sans-serif;
+    letter-spacing: .06em; white-space: nowrap;
+    opacity: 0; pointer-events: none; z-index: 31;
+    transition: opacity .25s ease, transform .25s ease;
+  }
+  #voiceCmdToast.on { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* 本场战报 */
+  #battlePanel {
+    position: fixed; inset: 0; z-index: 42;
+    display: none; place-items: center;
+    background: radial-gradient(900px 600px at 50% 0%, rgba(78, 240, 255, .1), transparent 60%), rgba(3, 5, 9, .82);
+    -webkit-backdrop-filter: blur(16px);
+    backdrop-filter: blur(16px);
+  }
+  #battlePanel.on { display: grid; }
+  .battle-card {
+    position: relative;
+    width: min(880px, calc(100vw - 80px));
+    max-height: calc(100vh - 80px); overflow: auto;
+    padding: 34px 38px 30px;
+    background: linear-gradient(160deg, rgba(16, 26, 40, .97), rgba(7, 11, 18, .98));
+    border: 1px solid rgba(120, 200, 255, .24);
+    border-radius: 24px;
+    box-shadow: 0 40px 120px rgba(0, 0, 0, .7), inset 0 1px 0 rgba(255, 255, 255, .05);
+    color: #d9e8f8;
+    font: 13px/1.6 "Microsoft YaHei", system-ui, sans-serif;
+  }
+  #battleClose {
+    position: absolute; top: 16px; right: 18px;
+    width: 38px; height: 38px; border: 0; border-radius: 12px;
+    background: rgba(255, 255, 255, .04); color: rgba(200, 225, 250, .7);
+    font-size: 22px; cursor: pointer;
+  }
+  #battleClose:hover { background: rgba(120, 200, 255, .16); color: #eaffff; }
+  .battle-kicker {
+    font-size: 11px; letter-spacing: .3em;
+    color: rgba(78, 240, 255, .68); margin-bottom: 8px;
+  }
+  .battle-card h2 {
+    margin: 0 0 6px; font-size: 30px; font-weight: 650; letter-spacing: .06em;
+    background: linear-gradient(120deg, #eaffff 20%, #8b7bff 70%, #4ef0ff 100%);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .battle-sub { margin: 0 0 22px; font-size: 13px; color: rgba(180, 205, 230, .6); letter-spacing: .06em; }
+  .battle-stats {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;
+    margin-bottom: 20px;
+  }
+  .battle-stat {
+    padding: 16px 16px 14px; border-radius: 16px;
+    background: linear-gradient(160deg, rgba(20, 32, 50, .86), rgba(10, 16, 26, .8));
+    border: 1px solid rgba(120, 200, 255, .14);
+  }
+  .battle-stat .k { font-size: 11px; letter-spacing: .14em; color: rgba(150, 190, 225, .6); }
+  .battle-stat .v {
+    margin-top: 6px; font-size: 32px; font-weight: 700; color: #eaffff;
+    font-variant-numeric: tabular-nums;
+    text-shadow: 0 0 18px rgba(78, 240, 255, .35);
+  }
+  .battle-stat .v small { font-size: 13px; font-weight: 500; color: rgba(180, 210, 240, .6); margin-left: 4px; }
+  .battle-models { display: grid; gap: 8px; margin-bottom: 20px; }
+  .battle-model {
+    display: grid; grid-template-columns: 150px 1fr 46px; align-items: center; gap: 12px;
+    padding: 8px 12px; border-radius: 10px;
+    background: rgba(255, 255, 255, .025);
+    border: 1px solid rgba(120, 200, 255, .08);
+  }
+  .battle-model .n { font-size: 12px; color: rgba(215, 235, 255, .84); }
+  .battle-model .bar { height: 6px; border-radius: 99px; background: rgba(255, 255, 255, .06); overflow: hidden; }
+  .battle-model .bar i {
+    display: block; height: 100%; border-radius: 99px;
+    background: linear-gradient(90deg, var(--aegis-cyan), var(--aegis-violet));
+    box-shadow: 0 0 12px rgba(78, 240, 255, .4);
+    transform-origin: left center;
+    transition: width .6s cubic-bezier(.2, .9, .3, 1);
+  }
+  .battle-model .c { text-align: right; font-variant-numeric: tabular-nums; color: rgba(180, 215, 245, .7); }
+  .battle-top {
+    display: grid; gap: 6px; padding-top: 4px;
+  }
+  .battle-top-row {
+    display: flex; align-items: center; gap: 12px;
+    padding: 8px 12px; border-radius: 10px;
+    background: rgba(255, 255, 255, .025);
+    border: 1px solid rgba(120, 200, 255, .08);
+    font-size: 12px;
+  }
+  .battle-top-row .idx {
+    width: 22px; height: 22px; display: grid; place-items: center;
+    border-radius: 8px; font-size: 11px; font-weight: 700;
+    background: rgba(78, 240, 255, .12); color: var(--aegis-cyan);
+  }
+  .battle-top-row .nm { flex: 1; color: rgba(220, 238, 255, .9); }
+  .battle-top-row .sc { color: var(--aegis-amber); font-variant-numeric: tabular-nums; }
+  .battle-note { margin-top: 18px; font-size: 11px; color: rgba(140, 170, 200, .5); letter-spacing: .04em; }
 </style>
 </head>
 <body>
   <div id="stage"></div>
   <div id="hud"><div><div class="ring"></div>正在载入环境光…</div></div>
+  <!-- 在线值班员：手机端注册后显示人数与角色点 -->
+  <div id="crowdBar" aria-live="polite">
+    <span class="crowd-kicker">值班员在线</span>
+    <b id="crowdCount">0</b>
+    <div id="crowdAvatars" class="crowd-avatars"></div>
+  </div>
   <div id="tabs">
     <button class="tab on" data-scene="campus" type="button">校园</button>
     <button class="tab" data-scene="community" type="button">小区</button>
@@ -186,11 +550,23 @@
     <button class="tab" data-scene="subway" type="button">地铁</button>
   </div>
 
+  <!-- 当前场景对应的模型：切页签由 cinematic_main.js 更新 -->
+  <div id="modelBar" aria-live="polite">
+    <span class="m-dot"></span>
+    <b id="modelName">校园巡检模型</b>
+    <span class="m-sep">·</span>
+    <span id="modelMeta">四模型接入 · 校园场景</span>
+    <span class="m-sep">·</span>
+    <span id="visitorCount">观众参与 0</span>
+  </div>
+
   <div id="quality">
     <button class="q" data-q="low" type="button">低</button>
     <button class="q" data-q="medium" type="button">中</button>
     <button class="q" data-q="high" type="button">高</button>
     <span id="fps">— fps</span>
+    <button class="q" id="battleBtn" type="button" title="本场战报（B）">战报</button>
+    <button class="q phone-entry" id="phoneBtn" type="button" title="手机扫码查看实时预警">手机</button>
     <button class="q" id="reset" type="button" title="重置视角（或按 R）">⟳</button>
   </div>
   <div id="pipbox">
@@ -202,11 +578,49 @@
     <div id="agentRows"></div>
   </div>
   <div id="feed">
-    <div class="panel-h">事件流 <span>点击地面派单</span></div>
+    <div class="panel-h">事件流 <span id="feedHint">点击地面派单</span></div>
     <div id="feedRows"></div>
   </div>
 
   <div id="toast"></div>
+  <div id="phonePanel" role="dialog" aria-modal="true" aria-label="手机预警接收页二维码">
+    <div class="phone-card">
+      <button id="phoneClose" type="button" aria-label="关闭">×</button>
+      <div class="kicker">MOBILE · ALERT RECEIVER</div>
+      <h2>手机看现场预警</h2>
+      <p class="sub">手机与这台电脑连同一 Wi-Fi，扫码打开预警接收页。<br />大屏上发现异常、派单、处置的每一步都会实时推到手机。</p>
+      <div id="phoneQR"></div>
+      <div class="phone-url">
+        <code id="phoneUrl">正在获取本机地址…</code>
+        <button id="phoneCopy" type="button" disabled>复制</button>
+      </div>
+      <p id="phoneHint" class="phone-hint">手机与这台电脑需要连同一 Wi-Fi。</p>
+    </div>
+  </div>
+  <!-- 观众上报：四模型会诊动效（手机 POST /api/commands 后弹出） -->
+  <div id="visitorToast" role="status" aria-live="polite">
+    <div class="v-head">
+      <span class="v-kicker">AUDIENCE · REPORT</span>
+      <b id="visitorTitle">收到观众上报</b>
+      <span class="v-scene" id="visitorScene">校园</span>
+    </div>
+    <ol class="v-rows" id="visitorRows"></ol>
+    <div class="v-verdict pulse" id="visitorVerdict">四模型会诊中…</div>
+  </div>
+  <!-- 本场战报：参与人数 / 上报次数 / 四模型命中 / 最快处置 / 值班员榜单 -->
+  <div id="battlePanel" role="dialog" aria-modal="true" aria-label="本场战报">
+    <div class="battle-card">
+      <button id="battleClose" type="button" aria-label="关闭战报">×</button>
+      <div class="battle-kicker">LIVE · SESSION REPORT</div>
+      <h2>本场 AI 安保战报</h2>
+      <p class="battle-sub" id="battleSub">四模型协同 · 观众参与闭环</p>
+      <div class="battle-stats" id="battleStats"></div>
+      <div class="battle-models" id="battleModels"></div>
+      <div class="battle-top" id="battleTop"></div>
+      <p class="battle-note">展台演示：模型输出为模拟，调度与推送为真实链路；统计仅限本场本机会话。</p>
+    </div>
+  </div>
+  <div id="voiceCmdToast" role="status" aria-live="polite"></div>
   <div id="tip">拖动环绕 · 滚轮推拉 · <b>点击地面</b>派单 · <b>1–9</b> 跟随设备 · <b>G</b> 回到全局 · <b>H</b> 收起面板</div>
   <div id="credit">材质 AmbientCG · 天空 Poly Haven · 均为 CC0</div>
   <script type="module" src="./src/cinematic_main.js"></script>

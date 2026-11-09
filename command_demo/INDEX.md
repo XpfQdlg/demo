@@ -85,7 +85,7 @@
 | --- | --- |
 | `index.html` | 页面骨架：画布、取景框、顶栏、执行体外框、事件流、状态栏 |
 | `package.json` | 依赖 three 0.169、vite 5.4；开发依赖 puppeteer-core |
-| `vite.config.js` | 开发服务器 5179；两个入口（index 与 cinematic） |
+| `vite.config.js` | 开发服务器 5179；三个入口（index / cinematic / mobile），并挂手机联动总线插件 |
 | `vite.single.config.js` | 单文件构建专用：只留观感版入口，动态导入并进一块 |
 | `观感版演示.html` | **最终交付物**，8 MB 单文件，双击即开，离线可用 |
 | `启动.bat` | 一键安装依赖、起服务、开浏览器（打开的是观感版） |
@@ -98,8 +98,17 @@
 | `src/core/app.js` | 流程编排：场景、视角、剧本、轮播、事件联动 |
 | `src/core/events.js` | 事件层：事件模型、状态机、调度串接、剧本执行 |
 | `cinematic.html` | 观感版预览页，`?scene=campus\|community\|forest\|subway`，可加 `&q=low\|medium\|high` |
-| `src/cinematic_main.js` | 观感版入口：场景切换、取景、光照跟随、设备列表与事件流、点击派单 |
+| `src/cinematic_main.js` | 观感版入口：场景切换、取景、光照跟随、设备列表与事件流、点击派单、推送告警到手机 |
 | `src/core/cinematic.js` | 观感版渲染核心：AgX 色调映射、全景环境光、程序化天空、后处理管线 |
+| `mobile.html` | 手机端预警接收页入口，短地址 `/phone`（302 到 `mobile.html`） |
+| `src/mobile/main.js` | 手机页界面层：卡片列表、详情抽屉、筛选、新预警 toast/声音/振动 |
+| `src/mobile/ui.css` | 手机页样式：深色指挥中枢风、手机优先、安全区与减弱动效 |
+| `src/mobile/store.js` | 手机页状态与数据源：SSE 订阅、快照回放、离线演示兜底、持久化与未读 |
+| `src/mobile/contract.js` | 大屏与手机共用的事件契约、异常/状态元数据、时间与距离格式化 |
+| `src/mobile/demo_feed.js` | 演示模式数据源：按监控层节奏模拟完整预警生命周期 |
+| `src/core/alert_publish.js` | 大屏侧发布器：把监控层五段状态整理成契约并串行 POST 到总线 |
+| `src/views/phone_link.js` | 大屏右上角「手机」入口：局域网地址探测 + 二维码弹层 |
+| `tools/alert_bus.mjs` | Vite 插件：内存事件日志、POST / SSE / snapshot / health / info |
 | `src/core/pbr.js` | 真实 PBR 材质库，预载 AmbientCG 的四通道贴图 |
 | `src/cine/building.js` | 观感版建筑构件：勒脚、女儿墙、窗、屋顶设备、远景体量 |
 | `src/cine/scene_campus.js` | 整个校园：建筑、道路、行道树、围栏、两座小山，并调用 `add_community()` 把小区接在东侧 |
@@ -148,6 +157,11 @@
 | `tools/checks/_smoke.mjs` | 主演示冒烟：固定等待后截图，收集控制台报错 |
 | `tools/checks/_alert_probe.mjs` | 监控报警验收：点位、报警文案、派了哪台、处置后道具与光圈复位；四场景通用 |
 | `tools/checks/_ui_probe.mjs` | 讲解面板验收：设备列表、事件流、点击派单、跟随优先、H 收起 |
+| `tools/checks/_alert_bus_probe.mjs` | 大屏五段生命周期是否完整、同 id、按序推到本机总线 |
+| `tools/checks/_mobile_probe.mjs` | 手机预警页验收：实时链路、统计筛选详情未读、演示模式 |
+| `tools/checks/_phone_link_probe.mjs` | 大屏「手机」入口验收：二维码生成、局域网地址可达 |
+| `tools/checks/_e2e_phone_probe.mjs` | 端到端验收：大屏真实报警 → 手机页收到 → 处置闭环 |
+| `tools/checks/_model_bar_probe.mjs` | 四模型场景应用验收：大屏模型条切换、页签 tooltip、场景本地化异常名 |
 | `tools/checks/_follow.mjs` / `_tabs.mjs` / `_life_probe.mjs` | 跟随、页签切换、行人与道具验收 |
 | `shots/` | 验收截图输出目录，运行时自动创建，不入库 |
 | `../map_trace/_archive/backup_20261106/` | 改数据前的 `map_package.json` 与 `ground.png` 快照 |
@@ -169,7 +183,18 @@ npm run bundle        # 等价于 node tools/bundle.mjs --clean
 
 # 单文件离线验收：四场景截图 + 贴图解码检查
 node tools/checks/file_check.mjs
+
+# 用构建产物演示（同样监听 0.0.0.0:5179，手机预警页与总线都可用）
+npm run build
+npm run preview
+
+# 手机预警页验收（先起 dev server 或 preview）
+node tools/checks/_alert_bus_probe.mjs
+node tools/checks/_mobile_probe.mjs
 ```
+
+手机预警页：dev server 起来后，手机与电脑连同一 Wi-Fi，扫码或直接打开
+`http://<电脑局域网IP>:5179/phone`。详细链路见 `../docs/07_移动预警接收页.md`。
 
 最终产物是观感版 `cinematic.html`，交付形态是 `观感版演示.html`。展台直接双击该文件，不需要 Node 与网络。
 
@@ -430,5 +455,88 @@ medium 为默认：像素比 1.2、GTAO 8 采样、阴影 2048。页面上有实
 | three | 0.169.0 | 3D 渲染 |
 | vite | 5.4.10 | 开发服务器与构建 |
 | puppeteer-core | ^25 | 截图验收，仅开发用 |
+| qrcode-generator | 1.4.4 | 大屏「手机」入口的二维码，纯 JS、随包内联 |
 
-系统依赖：Microsoft Edge（截图验收用）。构建产物为单文件，运行不需要网络。
+系统依赖：Microsoft Edge 或 Chrome（截图验收用）。构建产物为单文件，运行不需要网络。
+
+---
+
+## 九、移动端预警接收页（2026-11-09）
+
+在原有观感版上加的伴随页面：手机扫码打开，实时看大屏的异常信息。
+
+- 数据链路：`cine/monitor.js` 状态机 → `core/alert_publish.js`（串行 POST）→ `tools/alert_bus.mjs`
+  的内存事件日志（最近 500 条）→ SSE → `src/mobile/store.js` 回放事件合并成卡片 → 手机 UI。
+- 总线只在 dev server / preview 里存在，没有引入新进程；单文件离线包要实时接收需另起服务。
+- 手机端功能：连接状态/未读角标/声音开关、场景条、四项统计、全部/待处置/处置中/已处置筛选、
+  五段进度卡片、生命周期详情抽屉、新预警 toast + WebAudio 提示音 + 振动、刷新恢复、断线重连。
+- 连不上总线时自动进入「演示模式」，用 `src/mobile/demo_feed.js` 按真实节奏模拟整条状态机，
+  顶部有明确标注，不冒充真实数据。
+- 事件契约见 `src/mobile/contract.js`，状态机只允许 phase 前进，乱序事件不会让卡片倒退。
+- 大屏右上角「手机」按钮：向 `/api/alerts/info` 问本机局域网 IPv4，生成二维码；
+  单文件 `file://` 下会先探本机 5179，探到就把事件发到那里的总线。
+
+完整说明见 `../docs/07_移动预警接收页.md`；验收脚本 `_alert_bus_probe.mjs` 与 `_mobile_probe.mjs`。
+
+---
+
+## 十、四模型场景应用（2026-11-09）
+
+展台的对外口径是「四个场景各一个专属模型」，代码里的唯一定义在
+`src/mobile/contract.js` 的 `SCENE_MODELS`：
+
+| 模型 | 场景 | 演示中接入的异常 |
+| --- | --- | --- |
+| 校园巡检模型 | 校园 | 明火、人员聚集、垃圾堆积 |
+| 小区安防模型 | 小区 | 烟雾火灾、出入口拥挤、垃圾满溢 |
+| 地铁客运模型 | 地铁 | 明火烟雾、人员密度异常、通道遗留物 |
+| 森林火险模型 | 森林 | 火险烟雾、人员活动异常、林区垃圾 |
+
+应用链路：模型识别 → 风险研判 → 就近调度 → 移动触达。
+
+- 大屏：顶部模型条随页签切换；事件流/消息条带模型署名。
+- 手机：卡片模型署名 + 置信度；详情有四模型 chips、应用链路、模型研判；
+  顶栏「模型」打开四模型应用总览。
+- 模型输出层：`incident.analysis = { confidence, detect, rationale, suggestion }`。
+  真实模型接入前由 `default_analysis()` 生成模拟值，接入后覆盖同名字段即可。
+- 演示模式：`src/mobile/demo_feed.js` 按 校园→小区→地铁→森林 轮换四个模型。
+
+讲解话术、能力清单与真实/模拟边界见 `../docs/08_四大模型场景应用.md`；
+验收脚本 `tools/checks/_model_bar_probe.mjs`（大屏）与 `tools/checks/_mobile_probe.mjs`（手机端模型展示）。
+
+---
+
+## 十一、观众参与闭环（2026-11-09）
+
+展台互动：观众扫码 → 拍照 → 四模型会诊 → 一键上报 → 大屏切场景真出警 → 手机收到处置回执。
+
+- 手机：`mobile.html` / `src/mobile/main.js` / `ui.css` 新增参与 CTA、参与浮层
+  （选场景 / 拍照或演示照片 / 会诊动画 / 结论卡 / 上报）、visitor 受理条、
+  「观众上报」徽标与回执 toast。
+- 总线：`tools/alert_bus.mjs` 新增 `POST /api/commands`、`GET /api/commands/stream`
+  （SSE）、`/api/commands/health`；大屏在线走 big-screen，不在线或 15 秒无响应时
+  总线自动兜底合成完整生命周期。
+- 大屏：`cinematic_main.js` 订阅指挥流，弹出金色四模型会诊面板（`#visitorToast`）、
+  切到上报场景、`Monitor.trigger_visitor_report()` 在 3D 里真实报警派单、
+  镜头自动跟随 12 秒后回全局；模型条显示「观众参与 N」。
+- 监控层：`src/cine/monitor.js` 的 `trigger_visitor_report()` 在离空闲执行体最近的
+  摄像头旁生成上报点，3D 道具按类型复用，闭环后从 incidents 摘掉，不参与循环重报。
+- 事件契约：`incident.visitor=true`；手机端卡片显示金色「观众上报」徽标，
+  所有手机可见。
+- 文档与更大胆设想：`../docs/09_观众参与与大胆设想.md`。
+- 验收：`tools/checks/_visitor_bus_probe.mjs`、`tools/checks/_visitor_probe.mjs`。
+
+---
+
+## 十二、AEGIS 界面重设计 + 全部互动（2026-11-09）
+
+- 手机端：底部四 Tab（预警 / 模型 / 参与 / 我的）+ 深空黑/极光青紫新皮肤；
+  语音上报、巡检点打卡（模拟 AR）、模型盲盒、值班员角色/积分/榜单、
+  本场战报卡、机器狗第一视角回传（详情 700ms 轮询帧）。
+- 大屏：新皮肤；左上在线值班员、右上「战报」、`B` 打开本场战报、
+  语音指挥（切场景/回全局/跟随/上报/战报）、跟随出警时推送 PIP 帧。
+- 总线新接口：`/api/participants`、`/api/stats`、`/api/frames`，
+  `POST /api/commands` 新增 `voice_command`（action 白名单 + scene/kind/device）。
+- 验收：`tools/checks/_phone_v3_probe.mjs`、`tools/checks/_bigscreen_session_probe.mjs`；
+  旧探针 `_mobile_probe`、`_visitor_probe`、`_e2e_phone_probe`、`_model_bar_probe` 全部回归。
+- 设计说明：`../docs/10_AEGIS界面重设计.md`。
