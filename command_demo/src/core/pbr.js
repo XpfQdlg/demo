@@ -18,6 +18,7 @@ import * as THREE from "three";
      const scene = build_xxx()
    必须在建景前完成预载，否则材质拿到的是空纹理，
    首次渲染就是一整片纯色，之后再补也来不及（着色器已经编译过）。
+   例外是沙盘皮肤：它本来就会清掉全部贴图，见 set_textures_enabled。
    ══════════════════════════════════════════════════════════════════════════ */
 
 /* 单文件交付时，打包脚本会在页面里先注入 window.__INLINE_ASSETS：
@@ -84,10 +85,30 @@ function load_one(slug, channel, { srgb = false } = {}) {
 }
 
 /**
+ * 是否载入真贴图。沙盘皮肤会清掉所有贴图，关掉可以省掉 5 MB 图的解码与
+ * 首次上传；切到地铁（保留 PBR）前必须再打开。
+ *
+ * 关着的时候建出来的材质会进 mat_cache（贴图为空），所以重新打开时要清缓存，
+ * 否则地铁会拿到校园阶段建的无图材质。
+ */
+let textures_enabled = true;
+
+export function set_textures_enabled(on) {
+  if (on === textures_enabled) return;
+  textures_enabled = on;
+  if (on) mat_cache.clear();
+}
+
+/**
  * 预载一批材质的所有贴图（每个 slug 的 color/normal/roughness/ao 各一张）。
  * 重复次数不在预载阶段决定，见 pbr()。
+ *
+ * 沙盘皮肤（maquette）会把贴图全部清掉，预载纯属白读 5 MB 图、白等解码。
+ * 由 cinematic_main 在切场景前按 look/场景调用 set_textures_enabled 关掉。
  */
 export async function preload(slugs, _repeats) {
+  if (!textures_enabled) return 0;
+
   const tasks = [];
   for (const slug of slugs) {
     tasks.push(() => load_one(slug, "color", { srgb: true }));

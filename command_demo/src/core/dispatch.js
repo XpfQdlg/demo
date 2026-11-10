@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { route, route_length } from "../map/routes.js";
+import { shortest_route } from "../map/choose.js";
 import { px_to_world, px_distance_to_m, eta_seconds } from "../map/coords.js";
 
 /* ══════════════════════════════════════════════════════════════════════════
@@ -8,7 +8,8 @@ import { px_to_world, px_distance_to_m, eta_seconds } from "../map/coords.js";
    规则（docs/03 第 5.4 节）：
    - 限定同场景，跨场景调度物理上不成立
    - 只选 status === 'idle' 的设备
-   - 按欧氏距离最近优先
+   - 按 A* 折线长度最近优先，不是直线距离：两点之间直线最近，
+     但直线穿楼时那条路走不了，按直线派会把最近的设备派到楼的另一侧
    - 无空闲设备时返回 null，事件降级为待调度
    ══════════════════════════════════════════════════════════════════════════ */
 
@@ -17,32 +18,28 @@ export class Dispatcher {
     this.world = world;
   }
 
-  /** 该场景内的候选设备，按到目标点的距离升序 */
-  candidates(scene_id, target) {
-    const agents = this.world.agents_of(scene_id).filter((a) => a.status === "idle");
-    return agents
-      .map((a) => ({ agent: a, distance_px: Math.hypot(a.x - target.x, a.y - target.y) }))
-      .sort((p, q) => p.distance_px - q.distance_px);
+  /**
+   * 折线最短的可达设备（算法在 map/choose.js，与观感版共用一份）。
+   * @returns {{agent, path, len_px}|null}
+   */
+  nearest(scene_id, target) {
+    const idle = this.world.agents_of(scene_id).filter((a) => a.status === "idle");
+    const goal = { x: target.stand_x ?? target.x, y: target.stand_y ?? target.y };
+    return shortest_route(idle, goal, scene_id);
   }
 
   /**
-   * 派最近的空闲设备去目标点。
+   * 派折线最短的空闲设备去目标点。
    * @returns {{agent, distance_px, distance_m, eta_s, path}|null}
    */
   dispatch(scene_id, target) {
-    const cand = this.candidates(scene_id, target);
-    if (!cand.length) return null;
-
-    const { agent, distance_px } = cand[0];
-    const path = route(
-      { x: agent.x, y: agent.y },
-      { x: target.stand_x ?? target.x, y: target.stand_y ?? target.y },
-      scene_id,
-      agent.type
-    );
+    const best = this.nearest(scene_id, target);
 
     /* 没有可达路径就不要派。硬走会穿楼穿轨道 */
-    if (!path || path.length < 2) return null;
+    if (!best) return null;
+
+    const { agent, path, len_px } = best;
+    const distance_px = Math.hypot(agent.x - target.x, agent.y - target.y);
 
     agent.status = "moving";
     agent.target = target.id;
@@ -52,12 +49,11 @@ export class Dispatcher {
     agent.patrol = false; // 事件调度优先，巡检让位
     agent.occupied_until = Date.now() + 20000;
 
-    const len = route_length(path);
     return {
       agent,
       distance_px,
-      distance_m: px_distance_to_m(len),
-      eta_s: eta_seconds(len, agent.speed_mps),
+      distance_m: px_distance_to_m(len_px),
+      eta_s: eta_seconds(len_px, agent.speed_mps),
       path,
     };
   }

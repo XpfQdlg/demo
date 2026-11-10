@@ -136,6 +136,11 @@ export class Cinematic {
     this.sun.shadow.mapSize.set(2048, 2048);
     this.sun.shadow.bias = -0.00035;
     this.sun.shadow.normalBias = 0.06;
+    /* 阴影图按隔帧刷新：机器人走动的影子 30Hz 看不出顿，
+       但省略掉的是一整张 2048² 场景深度重绘。 */
+    this.sun.shadow.autoUpdate = false;
+    this.sun.shadow.needsUpdate = true;
+    this._shadow_tick = 0;
     this.scene.add(this.sun);
     this.scene.add(this.sun.target);
 
@@ -611,14 +616,17 @@ export class Cinematic {
     const P = {
       low:    { pixelRatio: 1.0, gtao: false, bloom: true, smaa: false, shadow: 1024 },
       medium: { pixelRatio: 1.2, gtao: true,  bloom: true, smaa: true,  shadow: 2048 },
-      high:   { pixelRatio: 2.0, gtao: true,  bloom: true, smaa: true,  shadow: 4096 },
+      high:   { pixelRatio: 1.5, gtao: true,  bloom: true, smaa: true,  shadow: 2048 },
     }[level] || null;
     if (!P) return;
 
     this.quality = level;
     this.renderer.setPixelRatio(Math.min(devicePixelRatio, P.pixelRatio));
     this.gtao.enabled = P.gtao && this.night !== false;
-    this.bloom.enabled = P.bloom;
+    /* 强度为 0 时（沙盘白天 0.06）整条 5 级 mip 链白跑，
+       真正要开关的是强度，见 _loop。 */
+    this._bloom_want = P.bloom;
+    this.bloom.enabled = P.bloom && this.bloom.strength > 0.08;
     this.smaa.enabled = P.smaa;
 
     if (this.sun.shadow.mapSize.x !== P.shadow) {
@@ -716,6 +724,12 @@ export class Cinematic {
     this.grade.uniforms.u_time.value = this.time;
     for (const fn of this.updaters) fn(dt, this.time);
     if (this.onFrame) this.onFrame(dt, this.time);
+
+    /* 强度决定 Bloom 是否值得跑：沙盘白天 0.06，整条 mip 链看不见却每帧都在算 */
+    this.bloom.enabled = this._bloom_want !== false && this.bloom.strength > 0.08;
+
+    /* 阴影隔帧重绘；切机位/切场景后的第一帧由 needsUpdate 兜住 */
+    if ((this._shadow_tick++ & 1) === 0) this.sun.shadow.needsUpdate = true;
 
     this.composer.render();
   }

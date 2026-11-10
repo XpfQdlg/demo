@@ -1,0 +1,32 @@
+# 展台站点容器。公网入口两条：
+#   http://47.104.205.57:2026/        frps tcp 2026 → 127.0.0.1:2026（本文件发布的就是这个口）
+#   http://agikid.com/                frps vhost 80 → frpc http 代理 → 127.0.0.1:2026
+#
+# 只绑 127.0.0.1，避免把 2026 暴露到工作站所在的办公网；公网访问一律走 frp。
+services:
+  aegis:
+    build: .
+    image: aegis-stage:2026
+    container_name: aegis-stage
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:2026:2026"
+    environment:
+      PORT: 2026
+      HOST: 0.0.0.0
+      # 二维码基址按访客进来的 Host 选，域名与 IP 两种入口并存
+      PUBLIC_ORIGINS: http://agikid.com,http://47.104.205.57:2026
+      # 事件流 / 值班员 / 战报落盘，刷新页面与重启容器都接着上一场
+      BUS_STATE_FILE: /data/bus_state.json
+    volumes:
+      - aegis-data:/data
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:2026/api/commands/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+
+# 命名卷：重建镜像不会带走上一场的事件流
+volumes:
+  aegis-data:

@@ -18,6 +18,7 @@ import {
   chain_stage,
   deck_agents,
   deck_alert,
+  deck_restore,
   deck_set_active,
   deck_visitors,
   mount_chain,
@@ -439,6 +440,13 @@ async function refresh_session() {
     ]);
     if (stats?.ok) battleState.stats = stats;
     if (people?.ok) battleState.participants = people.participants || [];
+    /* 刷新后「观众参与」也要接上：服务端计数比本地大就以服务端为准 */
+    const reports = Number(stats?.visitor_reports);
+    if (Number.isFinite(reports) && reports > interaction.reports) {
+      interaction.reports = reports;
+      if (visitorCountEl) visitorCountEl.textContent = `观众参与 ${reports}`;
+      deck_visitors(reports);
+    }
     render_crowd();
     if (battleState.open) render_battle();
   } catch {
@@ -729,11 +737,13 @@ let monitor = null;        // 监控与报警调度，切场景时重建
 /** 每个场景的底色：室内收紧雾、压低天光，室外留出远景层次 */
 function apply_night_view(name) {
   if (LOOK === "maquette") {
-    /* 站厅是室内：把太阳关掉、压低环境光，靠它自己的灯 */
+    /* 站厅是室内：把太阳关掉、压低环境光，靠它自己的灯。
+       浅色混凝土在 0.82 曝光下会白成一片，压到 0.66 才有明暗层次；
+       顶棚灯带与站台黄线因此才立得住。 */
     const indoor = name === "subway";
-    cine.sun.intensity = indoor ? 0.7 : 3.2;
-    cine.hemi.intensity = indoor ? 0.7 : 1.0;
-    cine.renderer.toneMappingExposure = indoor ? 0.82 : 1.02;
+    cine.sun.intensity = indoor ? 0.45 : 3.2;
+    cine.hemi.intensity = indoor ? 0.55 : 1.0;
+    cine.renderer.toneMappingExposure = indoor ? 0.66 : 1.02;
     return;
   }
   const L = LOOKS[LOOK] || LOOKS.dusk;
@@ -799,6 +809,9 @@ async function show(name) {
   /* 切场景先清掉上一场景注册的动画（列车等）与 kit 的 ticker（火焰、行人） */
   cine.clear_updaters();
   clearTicks();
+  /* 沙盘皮肤不贴图：关掉预载，省掉 5 MB 图解码。
+     地铁保留 PBR，必须重新打开（并清掉无图材质缓存）。 */
+  PBR.set_textures_enabled(!(LOOK === "maquette" && name !== "subway"));
   const root = await BUILDERS[name](cine);
 
   /* 合并在挂进场景之前做：此时所有网格的父节点都还是场景自己的组，
@@ -1327,8 +1340,12 @@ function update_agent_rows() {
 
 /** 事件流：最新在上，超过八条丢最老的 */
 function log_event(text, kind = "") {
+  prepend_feed(Date.now(), text, kind);
+}
+
+function prepend_feed(ts, text, kind = "") {
   if (!feedRowsEl) return;
-  const d = new Date();
+  const d = new Date(ts);
   const p = (n) => String(n).padStart(2, "0");
   const row = document.createElement("div");
   row.className = "feed-row" + (kind ? " " + kind : "");
@@ -1338,6 +1355,55 @@ function log_event(text, kind = "") {
   row.append(t, document.createTextNode(text));
   feedRowsEl.prepend(row);
   while (feedRowsEl.children.length > 8) feedRowsEl.lastChild.remove();
+}
+
+/**
+ * 刷新页面后把总线里的事件回放到事件流：大屏重开时不该是空面板，
+ * 也不该把「刚才那一单」当成没发生过。只回放最近 8 条，文案与实时回调一致。
+ */
+async function restore_feed() {
+  let events = [];
+  try {
+    const res = await fetch(`${interaction_bus_base()}/api/alerts/snapshot`, { cache: "no-store" });
+    if (!res.ok) return;
+    events = (await res.json())?.events || [];
+  } catch {
+    return;   // 离线包/总线没起：保持空面板，不影响 3D
+  }
+  if (!Array.isArray(events) || !events.length) return;
+
+  const scene_counts = {};
+  const rows = [];
+  for (const ev of events) {
+    const inc = ev.incident;
+    if (!inc) continue;
+    const scene = ev.scene || inc.scene || "campus";
+    let text = "";
+    let kind = "";
+    if (ev.type === "alarm") {
+      const model = scene_model_of(scene);
+      scene_counts[scene] = (scene_counts[scene] || 0) + 1;
+      text = inc.visitor
+        ? `【观众上报】${ev.scene_label || model.scene_label}${inc.name}`
+        : `【${model.short}】${inc.area}发现${inc.name}`;
+      kind = "warn";
+    } else if (ev.type === "dispatched") {
+      const m = Math.round(Number(ev.distance_m));
+      text = `派 ${ev.agent?.name || "执行体"} 前往${inc.area}` + (Number.isFinite(m) ? `（约 ${m} 米）` : "");
+    } else if (ev.type === "arrive") {
+      text = `${ev.agent?.name || "执行体"} 到达${inc.area}`;
+    } else if (ev.type === "resolved") {
+      text = `${inc.area}${inc.name}已处置`;
+      kind = "ok";
+    } else {
+      continue;   // handling 与 scene 不占事件流
+    }
+    rows.push({ ts: Number(ev.ts) || 0, text, kind });
+  }
+
+  rows.sort((a, b) => a.ts - b.ts);
+  for (const r of rows.slice(-8)) prepend_feed(r.ts, r.text, r.kind);
+  deck_restore(scene_counts);
 }
 
 /** 点击地面：射线打到地平面，换算成像素坐标派最近的一台过去 */
@@ -1728,6 +1794,7 @@ async function boot() {
   /* 场景建好后再订阅指挥流：手机上报可能要求切场景，避免和首次加载抢 */
   start_interaction_channel();
   start_live_session();
+  restore_feed();
   start_autorun();
   start_stage_drill();
   start_camera_drift();

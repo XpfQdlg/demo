@@ -131,6 +131,17 @@ export function deck_alert(scene, label) {
   }
 }
 
+/** 刷新页面后按总线里的历史事件把「今日预警」补回去：只改数字，不放闪烁动画 */
+export function deck_restore(map) {
+  for (const [scene, n] of Object.entries(map || {})) {
+    const c = cards.get(scene);
+    const v = Number(n) || 0;
+    if (!c || v <= 0) continue;
+    counts[scene] = Math.max(counts[scene], v);
+    c.alert_b.textContent = String(counts[scene]);
+  }
+}
+
 export function deck_model(scene) {
   return SCENE_MODELS[scene] || SCENE_MODELS.campus;
 }

@@ -2,7 +2,7 @@ import * as THREE from "three";
 import { pbr } from "../core/pbr.js";
 import PACKAGE from "../map/data/map_package.json";
 import { px_to_world, px_distance_to_m, MAP } from "../map/coords.js";
-import { route, route_length } from "../map/routes.js";
+import { shortest_route } from "../map/choose.js";
 import { nav_for } from "../map/nav_grid.js";
 import { spread_spots } from "../map/pathfind.js";
 
@@ -483,33 +483,19 @@ export class Monitor {
 
   /**
    * 从空闲设备里挑折线最短的一台，不派，只挑。
-   * 距离按 A* 折线长度算，不是直线距离：两点之间直线最近，
-   * 但直线穿楼时那条路走不了。
+   * 距离按 A* 折线长度算，不是直线距离——算法与主演示共用 map/choose.js。
    */
   _nearest_idle(target_px) {
-    let best = null;
-    for (const a of this.agents) {
-      if (a.status !== "idle" || a.task) continue;
-      const path = route(
-        { x: a.x, y: a.y },
-        { x: target_px[0], y: target_px[1] },
-        this.scene,
-        a.type
-      );
-      if (!path || path.length < 2) continue;
-      /* 起点会吸附到最近的可行走格心：人形机器人只走路面，站在草地上时
-         这条吸附距离不算进折线长度，报出去就会变成「约 5 米」其实还在二十米外 */
-      const gap = Math.hypot(path[0][0] - a.x, path[0][1] - a.y);
-      const len = route_length(path) + gap;
-      if (!best || len < best.len) best = { agent: a, path, len };
-    }
-    return best;
+    const idle = this.agents.filter((a) => a.status === "idle" && !a.task);
+    const goal = { x: target_px[0], y: target_px[1] };
+    return shortest_route(idle, goal, this.scene);
   }
 
   /** 折线长度换算成米与秒 */
   _leg_len(best) {
-    const len_m = px_distance_to_m(best.len);
-    /* ETA 按有效速度估：转弯、让行都会吃掉一截，按上限 1.6 m/s 算 */
+    const len_m = px_distance_to_m(best.len_px);
+    /* ETA 按演示速度算：上限 3.8 m/s，否则九十米要跑一分钟，大屏上像卡住了。
+       真机约 1.2～1.6 m/s，对外讲的时候按 1.6 换算，别念屏幕上的秒数。 */
     const v = Math.min(best.agent.entity.maxSpeed ?? best.agent.entity.max_speed ?? 2.4, 3.8);
     return { len_m, eta_s: len_m / Math.max(0.3, v) };
   }
@@ -522,19 +508,11 @@ export class Monitor {
    * @param prefer    正在跟随的那台：它空闲就派它，讲解时点哪儿它就去哪儿
    */
   dispatch_to(target_px, prefer = null) {
+    const goal = { x: target_px[0], y: target_px[1] };
     let best = null;
 
     if (prefer && prefer.status === "idle" && !prefer.task) {
-      const path = route(
-        { x: prefer.x, y: prefer.y },
-        { x: target_px[0], y: target_px[1] },
-        this.scene,
-        prefer.type
-      );
-      if (path && path.length >= 2) {
-        const gap = Math.hypot(path[0][0] - prefer.x, path[0][1] - prefer.y);
-        best = { agent: prefer, path, len: route_length(path) + gap };
-      }
+      best = shortest_route([prefer], goal, this.scene);
     }
 
     if (!best) best = this._nearest_idle(target_px);
