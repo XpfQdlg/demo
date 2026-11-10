@@ -55,15 +55,17 @@ export const SCENE_MODELS = {
     demo_alerts: ["明火隐患", "违规吸烟", "消防栓异常", "疏散通道堵塞"],
     /* 同一套事件模型，按场景换成讲得通的异常名；
        alert_kinds 是本场景自动报警会轮到的类型，也是图卡能出真照片的类型 */
-    alert_kinds: ["fire", "smoke", "crowd", "hydrant", "exit"],
+    alert_kinds: ["smoke", "ebike", "parking", "hydrant", "exit"],
     alert_names: {
       fire: "明火隐患",
       smoke: "违规吸烟",
       crowd: "人员聚集",
       trash: "垃圾堆积",
-      hydrant: "消防栓异常",
+      hydrant: "消防栓被埋压",
       ext: "灭火器异常",
-      exit: "疏散通道堵塞",
+      exit: "安全出口标识异常",
+      ebike: "非机动车载人",
+      parking: "车辆违停占道",
     },
   },
   community: {
@@ -77,7 +79,7 @@ export const SCENE_MODELS = {
     coverage: "覆盖小区 11 组 21 项识别任务",
     capabilities: ["出入口拥挤与人员聚集", "电动车入楼 / 楼道堆物", "消防通道与积水隐患"],
     demo_alerts: ["出入口拥挤", "灭火器缺失", "安全出口堵塞", "消防栓被埋压"],
-    alert_kinds: ["crowd", "ext", "exit", "trash", "hydrant"],
+    alert_kinds: ["ext", "exit", "hydrant"],
     alert_names: {
       fire: "烟雾火灾",
       smoke: "楼道吸烟",
@@ -86,6 +88,8 @@ export const SCENE_MODELS = {
       hydrant: "消防栓被埋压",
       ext: "灭火器缺失",
       exit: "安全出口堵塞",
+      ebike: "电动车入楼",
+      parking: "消防通道占用",
     },
   },
   subway: {
@@ -99,7 +103,7 @@ export const SCENE_MODELS = {
     coverage: "覆盖地铁 16 组 32 项识别任务",
     capabilities: ["通道占用与遗留物品", "人员密度与异常行为", "积水渗漏与设施状态"],
     demo_alerts: ["人员密度异常", "灭火器异常", "安全出口堵塞"],
-    alert_kinds: ["crowd", "ext", "exit"],
+    alert_kinds: ["door", "ext", "exit"],
     alert_names: {
       fire: "明火烟雾",
       smoke: "站台吸烟",
@@ -108,6 +112,9 @@ export const SCENE_MODELS = {
       hydrant: "消防栓异常",
       ext: "灭火器异常",
       exit: "安全出口堵塞",
+      ebike: "非机动车进站",
+      parking: "通道占用",
+      door: "屏蔽门状态异常",
     },
   },
   forest: {
@@ -121,7 +128,7 @@ export const SCENE_MODELS = {
     coverage: "覆盖森林 7 项火险与林业识别任务",
     capabilities: ["明火 / 烟雾 / 微烟雾", "林木病虫害与倒木断枝", "林道障碍与林区垃圾"],
     demo_alerts: ["火险烟雾", "林区吸烟", "人员活动异常", "消防栓异常"],
-    alert_kinds: ["fire", "smoke", "crowd", "hydrant"],
+    alert_kinds: ["fire", "smoke", "hydrant"],
     alert_names: {
       fire: "火险烟雾",
       smoke: "林区吸烟",
@@ -130,6 +137,8 @@ export const SCENE_MODELS = {
       hydrant: "消防栓异常",
       ext: "灭火器异常",
       exit: "疏散通道堵塞",
+      ebike: "林道骑车",
+      parking: "林道占用",
     },
   },
 };
@@ -232,6 +241,39 @@ export const KIND_META = {
     soft: "rgba(255, 195, 92, .12)",
     icon: "arrow",
     hint: "安全出口前堆放杂物，通道变窄",
+  },
+  ebike: {
+    kind: "ebike",
+    name: "非机动车载人",
+    level: 2,
+    level_label: "中危",
+    color: "#f7a04a",
+    glow: "rgba(247, 160, 74, .4)",
+    soft: "rgba(247, 160, 74, .12)",
+    icon: "arrow",
+    hint: "电动车带人、逆行或驶入禁行路段",
+  },
+  parking: {
+    kind: "parking",
+    name: "车辆违停占道",
+    level: 2,
+    level_label: "中危",
+    color: "#ffcb6b",
+    glow: "rgba(255, 203, 107, .4)",
+    soft: "rgba(255, 203, 107, .12)",
+    icon: "arrow",
+    hint: "车辆停在黄格线或消防通道上",
+  },
+  door: {
+    kind: "door",
+    name: "屏蔽门状态异常",
+    level: 2,
+    level_label: "中危",
+    color: "#8fb8ff",
+    glow: "rgba(143, 184, 255, .4)",
+    soft: "rgba(143, 184, 255, .12)",
+    icon: "shield",
+    hint: "站台屏蔽门未闭合或指示灯异常",
   },
 };
 

@@ -13,8 +13,10 @@ import { KIND_META } from "../mobile/contract.js";
  * 切场景时随 marker 组一起被清掉。
  */
 
-const MAX_CARDS = 2;
-const HOLD_MS = 13000;
+const MAX_CARDS = 1;
+/* 报警间隔 12 s（monitor.ALARM_GAP），卡片活 9 s：
+   上一张收干净，下一张才弹，两张卡不会叠在一起挡住事发点 */
+const HOLD_MS = 9000;
 const EXIT_MS = 360;
 
 const pad2 = (n) => String(n).padStart(2, "0");

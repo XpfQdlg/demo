@@ -77,8 +77,8 @@ const VOICE_ACTIONS = new Set(["scene", "follow", "overview", "report", "battle"
 
 const EVENT_TYPES = new Set(["scene", "alarm", "dispatched", "arrive", "handling", "resolved"]);
 const SCENES = new Set(["campus", "community", "subway", "forest"]);
-const KINDS = new Set(["fire", "crowd", "trash", "smoke", "hydrant", "ext", "exit"]);
-const KIND_LEVEL = { fire: 3, crowd: 2, trash: 1, smoke: 2, hydrant: 2, ext: 2, exit: 2 };
+const KINDS = new Set(["fire", "crowd", "trash", "smoke", "hydrant", "ext", "exit", "ebike", "parking", "door"]);
+const KIND_LEVEL = { fire: 3, crowd: 2, trash: 1, smoke: 2, hydrant: 2, ext: 2, exit: 2, ebike: 2, parking: 2, door: 2 };
 const KIND_NAME = {
   fire: "明火",
   crowd: "人员聚集",
@@ -87,6 +87,9 @@ const KIND_NAME = {
   hydrant: "消防栓异常",
   ext: "灭火器异常",
   exit: "疏散通道堵塞",
+  ebike: "非机动车载人",
+  parking: "车辆违停占道",
+  door: "屏蔽门状态异常",
 };
 const SCENE_LABEL = { campus: "校园", community: "小区", subway: "地铁", forest: "森林" };
 

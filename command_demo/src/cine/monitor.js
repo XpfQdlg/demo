@@ -34,11 +34,14 @@ const KIND_NAME = {
   hydrant: "消防栓异常",
   ext: "灭火器异常",
   exit: "疏散通道堵塞",
+  ebike: "非机动车载人",
+  parking: "车辆违停占道",
+  door: "屏蔽门状态异常",
 };
 const SCENE_NAME = { campus: "校园", community: "小区", forest: "西山林区", subway: "地铁站厅" };
 
-const FIRST_ALARM = 9;    // 场景加载后首起报警，留出镜头安顿的时间
-const ALARM_GAP = 17;     // 相邻两起报警的间隔
+const FIRST_ALARM = 7;    // 场景加载后首起报警，留出镜头安顿的时间
+const ALARM_GAP = 12;     // 相邻两起报警的间隔（展台节奏：20 分钟能讲四五轮）
 const RETRY_GAP = 5;      // 没有空闲设备、或没有可达路径时的重试间隔
 const CYCLE_GAP = 45;     // 一轮全部处置完后，隔多久重新开一轮
 const COVERAGE_PX = 60;   // 摄像头覆盖半径，30 米

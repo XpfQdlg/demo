@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { Crowd, crowd_cluster } from "../core/crowd.js";
-import { fireFlame, smokePlume } from "../core/kit.js";
+import { fireFlame, smokePlume, car, scooter, person } from "../core/kit.js";
 import { px_to_world } from "../map/coords.js";
 import { pbr } from "../core/pbr.js";
 
@@ -191,8 +191,105 @@ function make_exit_block() {
 }
 
 /**
+ * 违停车辆：车斜停在路沿，压着一块黄色网格线，远处一眼看出「占道」。
+ * 对应素材里 campus-road-2（白车压在黄格线上）那张实拍。
+ */
+function make_parking() {
+  const g = new THREE.Group();
+  const c = car({ color: 0xe9ecef, type: "sedan" });
+  c.rotation.y = 0.42;
+  c.position.set(0.6, 0, -0.3);
+  g.add(c);
+
+  const grid = new THREE.Mesh(
+    new THREE.PlaneGeometry(7.2, 4.6),
+    new THREE.MeshStandardMaterial({ color: 0xffce3d, roughness: 0.92, transparent: true, opacity: 0.32 })
+  );
+  grid.rotation.x = -Math.PI / 2;
+  grid.position.set(-1.8, 0.03, 1.6);
+  g.add(grid);
+  return g;
+}
+
+/**
+ * 非机动车载人：一辆电动车旁站两个人，对应素材里 campus-road-3
+ * （一辆小电驴载着两个人从林荫路穿过）。
+ */
+function make_ebike() {
+  const g = new THREE.Group();
+  const s = scooter({ color: 0x2f6f92 });
+  s.rotation.y = 0.5;
+  g.add(s);
+
+  const a = person({ shirt: 0x2b3138, pants: 0x2a2f36 });
+  a.position.set(0.72, 0, 0.5);
+  a.rotation.y = -0.4;
+  g.add(a);
+
+  const b = person({ shirt: 0x8d9199, pants: 0x2b3138 });
+  b.position.set(-0.52, 0, 0.6);
+  b.rotation.y = 0.3;
+  g.add(b);
+  return g;
+}
+
+/**
+ * 站台屏蔽门：两扇玻璃门 + 门楣指示灯，对应素材里 subway-platform-2
+ * （一段带黄色警示条和「注意站台与列车之间高度差」提示的屏蔽门）。
+ */
+function make_door() {
+  const g = new THREE.Group();
+  const frameMat = pbr("metal", 1, 1, { tint: 0xcfd6de });
+  const glass = new THREE.MeshStandardMaterial({
+    color: 0xaecbe0,
+    roughness: 0.18,
+    metalness: 0.2,
+    transparent: true,
+    opacity: 0.42,
+  });
+
+  for (const x of [-1.05, 1.05]) {
+    const panel = new THREE.Mesh(new THREE.BoxGeometry(2.0, 2.3, 0.08), glass);
+    panel.position.set(x, 1.18, 0);
+    g.add(panel);
+    const rail = new THREE.Mesh(new THREE.BoxGeometry(2.1, 0.1, 0.14), frameMat);
+    rail.position.set(x, 2.36, 0);
+    g.add(rail);
+  }
+
+  const sill = new THREE.Mesh(new THREE.BoxGeometry(4.5, 0.1, 0.3), frameMat);
+  sill.position.set(0, 0.06, 0);
+  g.add(sill);
+
+  /* 门楣指示灯：绿色常亮改成黄色，表示「状态异常」 */
+  const lamp = new THREE.Mesh(
+    new THREE.BoxGeometry(0.7, 0.12, 0.08),
+    new THREE.MeshStandardMaterial({ color: 0xffd257, emissive: 0xffb020, emissiveIntensity: 1.6 })
+  );
+  lamp.position.set(0, 2.52, 0);
+  g.add(lamp);
+
+  /* 站台黄色警示条 */
+  const warn = new THREE.Mesh(
+    new THREE.PlaneGeometry(4.6, 0.24),
+    new THREE.MeshStandardMaterial({ color: 0xffcf3f, roughness: 0.9 })
+  );
+  warn.rotation.x = -Math.PI / 2;
+  warn.position.set(0, 0.02, 1.1);
+  g.add(warn);
+
+  g.traverse((o) => {
+    if (o.isMesh) {
+      o.castShadow = true;
+      o.receiveShadow = true;
+    }
+  });
+  return g;
+}
+
+/**
  * 在指定像素点摆一个情景。
- * @param kind  'trash' | 'fire' | 'crowd' | 'smoke' | 'hydrant' | 'ext' | 'exit'
+ * @param kind  'trash' | 'fire' | 'crowd' | 'smoke' | 'hydrant' | 'ext' | 'exit' | 'ebike' | 'parking' | 'door'
  */
 export function make_scene_prop(kind, px, seed = 1) {
   const [cx, cy] = px;
@@ -215,7 +312,13 @@ export function make_scene_prop(kind, px, seed = 1) {
               ? make_ext
               : kind === "exit"
                 ? make_exit_block
-                : make_trash;
+                : kind === "ebike"
+                  ? make_ebike
+                  : kind === "parking"
+                    ? make_parking
+                    : kind === "door"
+                      ? make_door
+                      : make_trash;
     g = maker(seed);
     g.position.set(w.x, 0, w.z);
   }

@@ -2,12 +2,15 @@
  * 现场抓拍样片。
  *
  * 「事件流 + 一张现场照片」比纯文字可信得多，但图必须和事件对得上：
- * 明火就出烟雾照、消防栓异常就出栓体照、出口堵塞就出安全出口照。
+ * 违规吸烟就出吸烟照、消防栓异常就出栓体照、非机动车载人就出骑车人的照片。
  * 所以这里按「场景 × 异常类型」挑图，而不是按场景轮播——
- * 轮播时 垃圾堆积 会抽到 白车，观众一眼就看出是摆设。
+ * 轮播时 非机动车载人 会抽到消防栓，观众一眼就看出是摆设。
  *
  * 照片放在 public/photos（构建时原样拷进 dist）；
  * 单文件版由 bundle.mjs 内联进 window.__INLINE_ASSETS，file:// 也能出图。
+ *
+ * 每张图的 note 写的是「照片里真的能看到的东西」，不是事件标题的复读：
+ * 卡片上标题是事件、下面一行是画面内容，两者对得上才不露馅。
  */
 
 const BASE = import.meta.env.BASE_URL || "/";
@@ -19,69 +22,61 @@ function photo_src(name) {
 }
 
 /* 每个场景只登记「手里真有照片」的类型，和 SCENE_MODELS.alert_kinds 一一对应。
-   同类型给 2–3 张，按事发点做稳定哈希轮换，同一起报警刷新后还是同一张。 */
+   同类型给 2–4 张，按事发点做稳定哈希轮换，同一起报警刷新后还是同一张。 */
 export const EVIDENCE_PHOTOS = {
   campus: {
-    fire: [
-      { src: photo_src("forest-smoke-3"), note: "绿化带 · 明火隐患" },
-      { src: photo_src("forest-smoke-1"), note: "教学楼后 · 违规用火" },
-    ],
     smoke: [
-      { src: photo_src("forest-smoke-1"), note: "绿化带 · 违规吸烟" },
-      { src: photo_src("forest-smoke-2"), note: "林荫道 · 违规吸烟" },
+      { src: photo_src("forest-smoke-1"), note: "绿化带边 · 有人点烟" },
+      { src: photo_src("forest-smoke-2"), note: "林荫道旁 · 手持香烟" },
+      { src: photo_src("forest-smoke-3"), note: "教学楼后 · 树下吸烟" },
+      { src: photo_src("forest-smoke-5"), note: "停车带旁 · 吸烟停留" },
     ],
-    crowd: [
-      { src: photo_src("campus-road-3"), note: "校园道路 · 人流集中" },
-      { src: photo_src("campus-road-4"), note: "人行横道 · 人流集中" },
-    ],
-    hydrant: [{ src: photo_src("campus-hydrant-1"), note: "消防栓 · 被植被遮挡" }],
+    ebike: [{ src: photo_src("campus-road-3"), note: "环湖路 · 一辆电动车载两人" }],
+    parking: [{ src: photo_src("campus-road-2"), note: "东门主路 · 车轮压住黄格线" }],
+    hydrant: [{ src: photo_src("campus-hydrant-1"), note: "绿化带 · 消防栓被草叶遮住" }],
     exit: [
-      { src: photo_src("campus-exit-1"), note: "安全出口 · 通道堆放" },
-      { src: photo_src("community-exit-1"), note: "安全出口 · 指示牌" },
+      { src: photo_src("campus-exit-1"), note: "楼道 · 绿色安全出口牌" },
+      { src: photo_src("exit-2"), note: "东侧楼梯 · 出口指示牌" },
+      { src: photo_src("exit-3"), note: "走廊尽头 · 疏散指示" },
     ],
-    trash: [{ src: photo_src("campus-road-2"), note: "东门主路 · 堆积物" }],
   },
   community: {
-    crowd: [
-      { src: photo_src("community-corridor-2"), note: "楼道 · 出入口拥挤" },
-      { src: photo_src("campus-road-4"), note: "单元门外 · 人流" },
-    ],
-    trash: [{ src: photo_src("community-corridor-3"), note: "楼道 · 垃圾桶满溢" }],
     ext: [
-      { src: photo_src("community-ext-1"), note: "楼道 · 灭火器箱" },
-      { src: photo_src("subway-ext-1"), note: "消防柜 · 器材状态" },
+      { src: photo_src("community-ext-1"), note: "楼道 · 灭火器箱门敞开" },
+      { src: photo_src("ext-2"), note: "一层门厅 · 红色器材箱" },
+      { src: photo_src("ext-3"), note: "消防柜 · 器材状态" },
+      { src: photo_src("community-corridor-3"), note: "楼梯口 · 挂墙灭火器" },
     ],
     exit: [
-      { src: photo_src("community-exit-1"), note: "安全出口 · 通道堵塞" },
-      { src: photo_src("campus-exit-1"), note: "疏散通道 · 堆放物" },
+      { src: photo_src("community-exit-1"), note: "安全出口 · 门上方指示牌" },
+      { src: photo_src("community-corridor-2"), note: "楼道 · 出口牌与应急灯" },
+      { src: photo_src("exit-4"), note: "通道 · 疏散指示牌" },
     ],
-    hydrant: [{ src: photo_src("community-hydrant-1"), note: "楼前 · 消防栓被埋压" }],
+    hydrant: [{ src: photo_src("community-hydrant-1"), note: "楼前草地 · 消防栓被灌木围住" }],
   },
   subway: {
-    crowd: [
-      { src: photo_src("subway-platform-1"), note: "站台 · 候车区人员密度" },
-      { src: photo_src("subway-platform-2"), note: "站台 · 屏蔽门人流" },
+    door: [
+      { src: photo_src("subway-platform-2"), note: "站台 2 号口 · 屏蔽门与警示条" },
+      { src: photo_src("subway-platform-1"), note: "站台 · 屏蔽门玻璃反光" },
     ],
-    ext: [{ src: photo_src("subway-ext-1"), note: "站厅 · 消防柜器材" }],
+    ext: [
+      { src: photo_src("subway-ext-1"), note: "站厅 · 消防柜与灭火器" },
+      { src: photo_src("ext-4"), note: "通道口 · 红色器材箱" },
+    ],
     exit: [
-      { src: photo_src("subway-corridor-1"), note: "站厅通道 · 安全出口" },
-      { src: photo_src("community-exit-1"), note: "疏散通道 · 指示牌" },
+      { src: photo_src("subway-corridor-1"), note: "站厅通道 · 安全出口牌" },
+      { src: photo_src("exit-3"), note: "楼梯口 · 疏散指示" },
     ],
   },
   forest: {
-    fire: [
-      { src: photo_src("forest-fire-1"), note: "西山林区 · 烟柱" },
-      { src: photo_src("forest-smoke-3"), note: "林缘 · 明火隐患" },
-    ],
+    fire: [{ src: photo_src("forest-fire-1"), note: "林缘 · 烟尘压低能见度" }],
     smoke: [
-      { src: photo_src("forest-smoke-1"), note: "林间空地 · 违规吸烟" },
-      { src: photo_src("forest-smoke-2"), note: "林道 · 违规吸烟" },
+      { src: photo_src("forest-smoke-1"), note: "林间空地 · 有人吸烟" },
+      { src: photo_src("forest-smoke-2"), note: "树干旁 · 手持香烟" },
+      { src: photo_src("forest-smoke-3"), note: "林道口 · 树下吸烟" },
+      { src: photo_src("forest-smoke-5"), note: "灌木边 · 吸烟停留" },
     ],
-    crowd: [
-      { src: photo_src("forest-smoke-2"), note: "林间 · 人员聚集" },
-      { src: photo_src("forest-smoke-3"), note: "林道口 · 人员停留" },
-    ],
-    hydrant: [{ src: photo_src("forest-hydrant-1"), note: "林区 · 消防栓被杂草埋压" }],
+    hydrant: [{ src: photo_src("forest-hydrant-1"), note: "林区 · 消防栓被杂草埋住" }],
   },
 };
 

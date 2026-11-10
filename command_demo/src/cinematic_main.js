@@ -253,6 +253,15 @@ function bump_visitor_count() {
 async function handle_visitor_command(cmd) {
   const started = performance.now();
   last_touch = Date.now();
+  /* 手机端可能带着别的场景的类型来（比如旧链接里的 trash），
+     先按本场景支持的 alert_kinds 归一，回执卡和 3D 报警才会说同一件事 */
+  const scene_model = SCENE_MODELS[cmd.scene] || SCENE_MODELS.campus;
+  const support = scene_model.alert_kinds || [];
+  if (support.length && !support.includes(cmd.kind)) {
+    const mapped = support[0];
+    cmd.kind = mapped;
+    cmd.name = scene_model.alert_names?.[mapped] || KIND_META?.[mapped]?.name || cmd.name;
+  }
   /* 已由兜底流程处置过的的不重复出警（大屏可能卡在切场景 >15 秒） */
   if (await visitor_already_handled(cmd.id)) {
     visitor_verdict("该上报已由兜底流程处置，未重复出警");
@@ -697,8 +706,9 @@ function make_monitor(tab, root, list) {
       on_manual_arrive,
     },
   });
-  /* 5 个点位 / 5 起异常：比原来 3 起更密，讲解一轮不用等太久 */
-  m.build({ count: 5, ...(MONITOR_AREA[tab] || {}) });
+  /* 8 个点位 / 8 起异常：讲解一轮十来分钟就能看到多种异常，
+     间隔 12 秒（monitor 的 ALARM_GAP），镜头不会一直空着 */
+  m.build({ count: 8, ...(MONITOR_AREA[tab] || {}) });
   window.__monitor = m;   // 调试用：验收脚本要读摄像头点位与报警状态
   /* 通知手机页换场景：旧场景里没闭环的预警，手机端会收尾掉 */
   publish_scene(tab);
@@ -956,7 +966,7 @@ function start_camera_drift() {
   };
   requestAnimationFrame(tick);
 }
-const DRILL_KIND = { campus: "fire", community: "crowd", forest: "fire", subway: "crowd" };
+const DRILL_KIND = { campus: "smoke", community: "exit", forest: "fire", subway: "crowd" };
 let drilling = false;
 let last_drill = Date.now();
 

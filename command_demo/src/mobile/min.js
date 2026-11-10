@@ -130,7 +130,9 @@ async function load_photos() {
         .map((it) => ({
           src: `./photos/${it.file}`,
           caption: String(it.caption || "").slice(0, 40),
-          kind: ["fire", "crowd", "trash"].includes(it.kind) ? it.kind : null,
+          /* 事件类型一直在扩（吸烟、消防栓、违停、屏蔽门…），这里不再白名单过滤：
+             只要求是个非空字符串，认不出的类型由 kind_meta 兜底成默认样式 */
+          kind: typeof it.kind === "string" && it.kind ? it.kind : null,
         }));
     }
   } catch {
@@ -491,8 +493,10 @@ function start_analysis() {
 }
 
 function analyse() {
-  const kind = shot?.kind || ["fire", "crowd", "trash"][Math.floor(hash01(scene_pick + (shot?.src || "")) * 3)];
   const model = SCENE_MODELS[scene_pick];
+  /* 没选中照片时也得给一个本场景说得通的类型，别硬编码三类 */
+  const fallback_kind = model?.alert_kinds?.[0] || "smoke";
+  const kind = shot?.kind || fallback_kind;
   const a = default_analysis(kind, {
     id: `${scene_pick}|${shot?.src || ""}`,
     area: shot?.caption || model?.name || "现场",
@@ -568,9 +572,9 @@ async function send_report() {
       body: JSON.stringify({
         type: "visitor_report",
         scene: scene_pick,
-        kind: shot.kind || "crowd",
+        kind: shot.kind || SCENE_MODELS[scene_pick]?.alert_kinds?.[0] || "smoke",
         confidence: shot.confidence || 0.9,
-        name: kind_meta(shot.kind || "crowd").name,
+        name: kind_meta(shot.kind || SCENE_MODELS[scene_pick]?.alert_kinds?.[0] || "smoke").name,
         client_id: client_id(),
         note: "观众手机上报",
       }),
