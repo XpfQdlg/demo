@@ -63,6 +63,25 @@ const visitorSceneEl = document.getElementById("visitorScene");
 const visitorRowsEl = document.getElementById("visitorRows");
 const visitorVerdictEl = document.getElementById("visitorVerdict");
 const visitorCountEl = document.getElementById("visitorCount");
+const visitorPingEl = document.getElementById("visitorPing");
+const visitorPingPctEl = document.getElementById("visitorPingPct");
+const visitorPingTitleEl = document.getElementById("visitorPingTitle");
+const visitorPingModelEl = document.getElementById("visitorPingModel");
+const visitorPingVerdictEl = document.getElementById("visitorPingVerdict");
+/* full = 整屏会诊（自动演练用）；ping = 右下角回执（观众上报用） */
+let visitor_mode = null;
+
+function visitor_verdict(text, pulse = false) {
+  visitorVerdictEl.textContent = text;
+  visitorVerdictEl.classList.toggle("pulse", pulse);
+  if (visitor_mode === "ping") visitorPingVerdictEl.textContent = text;
+}
+
+function close_visitor_ui() {
+  visitorToastEl.classList.remove("on");
+  visitorPingEl.classList.remove("on");
+  visitor_mode = null;
+}
 
 /* ── 大屏新版：在线值班员 / 本场战报 / 语音指挥 / 第一视角回传 ──────── */
 const crowdCountEl = document.getElementById("crowdCount");
@@ -158,10 +177,29 @@ async function ensure_scene(name) {
   return false;
 }
 
-/** 大屏会诊：整屏铺开，四个模型依次亮起，最后给结论 */
+/** 大屏会诊：自动演练铺满整屏；观众上报只给右下角回执，不打断主画面 */
 function show_visitor_overlay(cmd) {
   const main = SCENE_MODELS[cmd.scene] || SCENE_MODELS.campus;
   const pct = Math.round((Number(cmd.confidence) || 0.9) * 100);
+  /* 平板是讲解员在台上点的，仍然给整屏会诊；手机观众上报只给右下角回执 */
+  const full_mode = !!cmd._auto || cmd.client_id === "tablet";
+
+  if (!full_mode) {
+    visitor_mode = "ping";
+    visitorPingEl.style.setProperty("--accent", main.accent);
+    visitorPingPctEl.textContent = `${pct}%`;
+    visitorPingTitleEl.textContent = `${cmd.scene_label} · ${cmd.name}`;
+    visitorPingModelEl.textContent = main.name;
+    visitorPingVerdictEl.textContent = "已受理，正在派单…";
+    visitorPingEl.classList.add("on");
+    clearTimeout(interaction.overlay_timer);
+    interaction.overlay_timer = setTimeout(() => {
+      close_visitor_ui();
+      last_touch = Date.now();
+    }, 10000);
+    return;
+  }
+
   const rows = [
     {
       accent: main.accent,
@@ -185,9 +223,10 @@ function show_visitor_overlay(cmd) {
     });
   }
 
+  visitor_mode = "full";
   const kicker = document.querySelector("#visitorToast .v-kicker");
-  if (kicker) kicker.textContent = cmd._auto ? "STAGE · AUTO DRILL" : "AUDIENCE · REPORT";
-  visitorTitleEl.textContent = cmd._auto ? `自动演练 · 现场发现「${cmd.name}」` : `现场发现「${cmd.name}」`;
+  if (kicker) kicker.textContent = cmd._auto ? "STAGE · AUTO DRILL" : "STAGE · CONSOLE";
+  visitorTitleEl.textContent = `${cmd._auto ? "自动演练 · " : ""}现场发现「${cmd.name}」`;
   visitorSceneEl.textContent = `${cmd.scene_label} · ${main.short}主判`;
   const mainEl = document.getElementById("visitorMain");
   if (mainEl) mainEl.textContent = main.name;
@@ -197,7 +236,7 @@ function show_visitor_overlay(cmd) {
 
   clearTimeout(interaction.overlay_timer);
   interaction.overlay_timer = setTimeout(() => {
-    visitorToastEl.classList.remove("on");
+    close_visitor_ui();
     last_touch = Date.now();
   }, 12000);
 }
@@ -214,16 +253,14 @@ async function handle_visitor_command(cmd) {
   last_touch = Date.now();
   /* 已由兜底流程处置过的的不重复出警（大屏可能卡在切场景 >15 秒） */
   if (await visitor_already_handled(cmd.id)) {
-    visitorVerdictEl.textContent = "该上报已由兜底流程处置，未重复出警";
-    visitorVerdictEl.classList.remove("pulse");
+    visitor_verdict("该上报已由兜底流程处置，未重复出警");
     return;
   }
 
   show_visitor_overlay(cmd);
   let ready = await ensure_scene(cmd.scene);
   if (!ready) {
-    visitorVerdictEl.textContent = "场景加载超时，上报已记录";
-    visitorVerdictEl.classList.remove("pulse");
+    visitor_verdict("场景加载超时，上报已记录");
     show_toast("观众上报已记录，场景加载超时");
     return;
   }
@@ -239,15 +276,13 @@ async function handle_visitor_command(cmd) {
   }
   /* 兜底可能刚好在这段时间里补发，再确认一次，避免两张卡（处理很快时省略这次请求） */
   if (performance.now() - started > 8000 && (await visitor_already_handled(cmd.id))) {
-    visitorVerdictEl.textContent = "该上报已由兜底流程处置，未重复出警";
-    visitorVerdictEl.classList.remove("pulse");
+    visitor_verdict("该上报已由兜底流程处置，未重复出警");
     return;
   }
 
   const inc = monitor?.trigger_visitor_report({ kind: cmd.kind, command_id: cmd.id });
   if (!inc) {
-    visitorVerdictEl.textContent = "执行体全部在忙，上报已排队";
-    visitorVerdictEl.classList.remove("pulse");
+    visitor_verdict("执行体全部在忙，上报已排队");
     show_toast("执行体全部在忙，观众上报已排队");
     return;
   }
@@ -259,9 +294,10 @@ async function handle_visitor_command(cmd) {
   const dispatch_text = inc.by
     ? `已派 ${dev} 前往（约 ${Math.round(inc.distance_m)} 米，预计 ${Math.round(inc.eta_s)} 秒到位）`
     : "已下发就近处置指令";
-  visitorVerdictEl.textContent = `${KIND_META[inc.kind]?.level_label || "高危"} · ${dispatch_text}`;
-  visitorVerdictEl.classList.remove("pulse");
-  show_toast(`${cmd._auto ? "自动演练" : "收到观众上报"}：${cmd.scene_label}发现${inc.name} · ${dev} 前往处置`);
+  visitor_verdict(`${KIND_META[inc.kind]?.level_label || "高危"} · ${dispatch_text}`);
+  if (visitor_mode !== "ping") {
+    show_toast(`${cmd._auto ? "自动演练" : "收到观众上报"}：${cmd.scene_label}发现${inc.name} · ${dev} 前往处置`);
+  }
 }
 
 /** 串行处理观众上报：两条命令同时要求切场景时，不能各建各的场景，
@@ -1417,25 +1453,36 @@ function on_dispatched({ inc, agent, distance_m, eta_s }) {
   const n = agents.indexOf(agent) + 1;
   const dev = label_of(agent, n - 1);
   const model = scene_model_of(monitor_tab());
-  show_toast(
-    `${model.short}发现${inc.area}${inc.name}，已呼叫最近的 ${dev} 前往` +
-      `（约 ${Math.round(distance_m)} 米，预计 ${Math.round(eta_s)} 秒到位）`
-  );
+  /* 观众上报已经用右下角回执说清楚了，不再顶一条 toast，也不把镜头拉近；
+     自动演练才走整屏会诊 + 跟随，让台上的人看清机器狗出警。 */
+  if (visitor_mode !== "ping") {
+    show_toast(
+      `${model.short}发现${inc.area}${inc.name}，已呼叫最近的 ${dev} 前往` +
+        `（约 ${Math.round(distance_m)} 米，预计 ${Math.round(eta_s)} 秒到位）`
+    );
+  }
   clear_point_bubbles(`${inc.area}发现${inc.name}`);
   pop_bubble(agent, `${dev} · 前往处置`);
   log_event(`派 ${dev} 前往${inc.area}（约 ${Math.round(distance_m)} 米）`);
   chain_stage(2, "研判 → 就近调度");
 
-  /* 观众上报：大屏自动跟上去，让围观的人看到「他的一键上报真的把机器狗派出去了」 */
+  /* 自动演练：大屏跟上去，让围观的人看到机器狗真的出警；
+     观众上报只留全局视角，避免镜头怼到执行体脸上 */
   if (inc.visitor) {
-    const idx = agents.indexOf(agent);
-    if (idx >= 0) follow_agent(idx);
-    interaction.follow_until = performance.now() + 12000;
-    if (visitorToastEl.classList.contains("on")) {
-      visitorVerdictEl.classList.remove("pulse");
-      visitorVerdictEl.textContent =
-        `研判结论：${KIND_META[inc.kind]?.level_label || "高危"} · 已派 ${dev} 前往` +
-        `（约 ${Math.round(distance_m)} 米，预计 ${Math.round(eta_s)} 秒到位）`;
+    if (visitor_mode === "full") {
+      const idx = agents.indexOf(agent);
+      if (idx >= 0) follow_agent(idx);
+      interaction.follow_until = performance.now() + 12000;
+    } else {
+      interaction.follow_until = 0;
+      if (follow_idx >= 0) back_to_overview();
+    }
+    if (visitor_mode) {
+      const lead = visitor_mode === "ping" ? "" : "研判结论：";
+      visitor_verdict(
+        `${lead}${KIND_META[inc.kind]?.level_label || "高危"} · 已派 ${dev} 前往` +
+          `（约 ${Math.round(distance_m)} 米，预计 ${Math.round(eta_s)} 秒到位）`
+      );
     }
   }
 
@@ -1478,10 +1525,7 @@ function on_resolved({ inc, agent }) {
   chain_stage(3, "已闭环 · 等待下一条");
   if (inc.visitor) {
     show_toast(`观众上报闭环：${inc.area}${inc.name}已处置，${dev} 恢复巡检`);
-    if (visitorToastEl.classList.contains("on")) {
-      visitorVerdictEl.textContent = "处置完成 · 观众上报闭环";
-      visitorVerdictEl.classList.remove("pulse");
-    }
+    if (visitor_mode) visitor_verdict("处置完成 · 观众上报闭环");
   }
   publish_incident("resolved", {
     inc,

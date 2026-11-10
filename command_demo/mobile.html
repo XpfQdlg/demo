@@ -115,16 +115,24 @@
             <svg class="ic" aria-hidden="true"><use href="#ic-image"></use></svg>用演示照片
           </button>
         </div>
-        <p class="hint" id="photo-hint">照片只在本机预览，不会上传。</p>
+        <p class="hint" id="photo-hint">照片在本机读取，只把识别结果发给指挥中心。</p>
       </div>
 
       <div class="step">
         <div class="step-h"><i>3</i>让四个模型看一眼</div>
+        <div class="analyze" id="analyze" hidden>
+          <div class="an-head">
+            <span id="an-label">正在上传照片…</span>
+            <b id="an-pct">0%</b>
+          </div>
+          <div class="an-track"><i id="an-fill"></i></div>
+          <p class="an-note" id="an-note">上传后由指挥中心四个模型统一会诊</p>
+        </div>
         <div class="verdict" id="verdict" hidden>
           <h3><b id="verdict-title">—</b><span id="verdict-model"></span></h3>
           <dl id="verdict-rows"></dl>
         </div>
-        <button class="btn primary" type="button" id="btn-send" disabled>先拍一张照片</button>
+        <button class="btn primary" type="button" id="btn-send" hidden>重新上传</button>
       </div>
     </section>
   </div>

@@ -56,6 +56,11 @@ const dom = {
   btn_camera: $("btn-camera"),
   btn_demo: $("btn-demo"),
   btn_send: $("btn-send"),
+  analyze: $("analyze"),
+  an_label: $("an-label"),
+  an_pct: $("an-pct"),
+  an_fill: $("an-fill"),
+  an_note: $("an-note"),
   verdict: $("verdict"),
   verdict_title: $("verdict-title"),
   verdict_model: $("verdict-model"),
@@ -74,8 +79,9 @@ const el = (tag, cls, text) => {
 };
 
 let toast_timer = 0;
-function toast(text, ms = 2200) {
+function toast(text, ms = 2200, corner = false) {
   dom.toast.textContent = text;
+  dom.toast.classList.toggle("is-corner", corner);
   dom.toast.classList.add("is-on");
   clearTimeout(toast_timer);
   toast_timer = setTimeout(() => dom.toast.classList.remove("is-on"), ms);
@@ -411,16 +417,28 @@ let scene_pick = "campus";
 let shot = null;           // { src, caption, kind, demo }
 let demo_idx = 0;
 let sending = false;
+let analyze_token = 0;
+let analyze_raf = 0;
+
+function reset_report_ui() {
+  cancelAnimationFrame(analyze_raf);
+  analyze_token += 1;
+  dom.analyze.hidden = true;
+  dom.analyze.classList.remove("is-error", "is-done");
+  dom.an_fill.style.width = "0%";
+  dom.an_pct.textContent = "0%";
+  dom.btn_send.hidden = true;
+  dom.btn_send.disabled = false;
+  dom.verdict.hidden = true;
+  dom.shot_img.hidden = true;
+  dom.shot_empty.hidden = false;
+  dom.shot_cap.hidden = true;
+}
 
 function set_shot(next) {
   shot = next;
   if (!next) {
-    dom.shot_img.hidden = true;
-    dom.shot_empty.hidden = false;
-    dom.shot_cap.hidden = true;
-    dom.btn_send.disabled = true;
-    dom.btn_send.textContent = "先拍一张照片";
-    dom.verdict.hidden = true;
+    reset_report_ui();
     return;
   }
   dom.shot_empty.hidden = true;
@@ -429,9 +447,47 @@ function set_shot(next) {
   dom.shot_img.alt = next.caption || "现场照片";
   dom.shot_cap.hidden = !next.caption;
   dom.shot_cap.textContent = next.caption || "";
-  dom.btn_send.disabled = false;
-  dom.btn_send.textContent = "上报给指挥中心";
-  analyse();
+  start_analysis();
+}
+
+/** 拍照后先走一条「上传/分析」进度，完成后自动上报，不再让用户点一次确认 */
+function start_analysis() {
+  cancelAnimationFrame(analyze_raf);
+  const token = ++analyze_token;
+  const started = performance.now();
+  const duration = 2400;
+
+  dom.analyze.hidden = false;
+  dom.analyze.classList.remove("is-error", "is-done");
+  dom.analyze.classList.add("is-running");
+  dom.verdict.hidden = true;
+  dom.btn_send.hidden = true;
+  dom.an_fill.style.width = "0%";
+  dom.an_pct.textContent = "0%";
+  dom.an_label.textContent = "正在读取照片…";
+  dom.an_note.textContent = "上传后由指挥中心四个模型统一会诊";
+
+  /* 进度条在照片下方，手机上容易刚好被 tabbar 挡住，先滚进视野 */
+  requestAnimationFrame(() => dom.analyze.scrollIntoView({ behavior: "smooth", block: "center" }));
+
+  const tick = (now) => {
+    if (token !== analyze_token) return;
+    const p = Math.min(1, (now - started) / duration);
+    const pct = Math.round(p * 100);
+    dom.an_fill.style.width = `${pct}%`;
+    dom.an_pct.textContent = `${pct}%`;
+    if (p < 0.32) dom.an_label.textContent = "正在读取照片…";
+    else if (p < 0.62) dom.an_label.textContent = "四个模型读取画面…";
+    else if (p < 0.9) dom.an_label.textContent = "交叉复核中…";
+    else dom.an_label.textContent = "分析完成，正在上报…";
+    if (p < 1) {
+      analyze_raf = requestAnimationFrame(tick);
+    } else {
+      dom.analyze.classList.remove("is-running");
+      send_report();
+    }
+  };
+  analyze_raf = requestAnimationFrame(tick);
 }
 
 function analyse() {
@@ -455,15 +511,11 @@ function analyse() {
   const frag = document.createDocumentFragment();
   for (const [k, v] of rows) frag.append(el("dt", null, k), el("dd", null, v));
   dom.verdict_rows.replaceChildren(frag);
-  dom.verdict.hidden = false;
+  dom.verdict.hidden = true;
 
   shot.kind = kind;
   shot.confidence = a.confidence;
-
-  /* 手机上选完照片，结论和上报按钮通常在屏幕外，滚过去免得用户以为没反应 */
-  requestAnimationFrame(() => {
-    dom.btn_send.scrollIntoView({ behavior: "smooth", block: "center" });
-  });
+  return { a, km, model };
 }
 
 dom.seg.addEventListener("click", (e) => {
@@ -505,9 +557,10 @@ dom.btn_demo.addEventListener("click", () => {
 
 async function send_report() {
   if (sending || !shot) return;
+  const { a, km, model } = analyse();
   sending = true;
-  dom.btn_send.disabled = true;
-  dom.btn_send.textContent = "上报中…";
+  dom.btn_send.hidden = true;
+  dom.an_note.textContent = "正在把结果发送给指挥中心…";
   try {
     const res = await fetch("/api/commands", {
       method: "POST",
@@ -524,15 +577,30 @@ async function send_report() {
     });
     const data = await res.json().catch(() => null);
     if (!res.ok || !data || data.ok !== true) throw new Error((data && data.error) || `HTTP ${res.status}`);
-    toast("已上报，指挥中心已收到");
-    set_shot(null);
-    show_screen("alerts");
+
+    dom.an_label.textContent = "已上报";
+    dom.an_pct.textContent = "100%";
+    dom.an_fill.style.width = "100%";
+    dom.analyze.classList.add("is-done");
+    dom.an_note.textContent = `${model?.name || "指挥中枢"} · ${km.name} ${Math.round(a.confidence * 100)}% · 已提请处置`;
+    toast("已上报，指挥中心会收到", 3200, true);
+    const token = analyze_token;
+    setTimeout(() => {
+      if (token !== analyze_token) return;
+      sending = false;
+      set_shot(null);
+      show_screen("alerts");
+    }, 1100);
   } catch (err) {
-    toast(`上报失败：${err.message}`, 3000);
-  } finally {
     sending = false;
-    dom.btn_send.disabled = !shot;
-    if (shot) dom.btn_send.textContent = "上报给指挥中心";
+    dom.analyze.classList.remove("is-running");
+    dom.analyze.classList.add("is-error");
+    dom.an_label.textContent = "上报失败";
+    dom.an_note.textContent = "网络未连接，照片还在本机；点下面按钮重试。";
+    dom.btn_send.hidden = false;
+    dom.btn_send.disabled = false;
+    dom.btn_send.textContent = "重新上报";
+    toast(`上报失败：${err.message}`, 3000, true);
   }
 }
 

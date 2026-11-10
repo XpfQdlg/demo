@@ -1275,3 +1275,64 @@ body.map #stage::before, body.map #stage::after { display: none; }
 @keyframes bm-pulse { 0% { opacity: .35; } 50% { opacity: .06; } 100% { opacity: .35; } }
 .bm-route { animation: bm-dash 1.4s linear infinite; }
 @keyframes bm-dash { to { stroke-dashoffset: -28; } }
+
+/* ── 观众上报回执：右下角，不铺满整屏 ───────────────────────────── */
+#visitorPing {
+  position: fixed;
+  right: 28px;
+  bottom: 96px;
+  z-index: 34;
+  width: 342px;
+  padding: 14px 16px 13px;
+  border: 1px solid rgba(120, 156, 176, 0.22);
+  border-left: 3px solid var(--accent, #36c6dc);
+  border-radius: 12px;
+  background: rgba(8, 12, 16, 0.93);
+  box-shadow: 0 18px 46px rgba(0, 0, 0, 0.42);
+  opacity: 0;
+  transform: translateY(10px);
+  pointer-events: none;
+  transition: opacity 0.28s ease, transform 0.28s ease;
+}
+#visitorPing.on { opacity: 1; transform: none; }
+.vp-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.vp-kicker {
+  font: 500 9.5px/1 var(--num);
+  letter-spacing: 0.16em;
+  color: rgba(180, 208, 220, 0.62);
+}
+.vp-pct {
+  font: 600 15px/1 var(--num);
+  color: var(--accent, #36c6dc);
+  font-variant-numeric: tabular-nums;
+}
+.vp-title {
+  margin-top: 9px;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.vp-title b {
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: #f2f7f8;
+}
+.vp-title span {
+  font-size: 10.5px;
+  color: rgba(190, 210, 218, 0.55);
+}
+.vp-verdict {
+  margin-top: 9px;
+  padding-top: 9px;
+  border-top: 1px solid rgba(120, 150, 165, 0.16);
+  font-size: 12px;
+  line-height: 1.6;
+  color: rgba(218, 232, 236, 0.82);
+}

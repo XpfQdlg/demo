@@ -808,3 +808,58 @@ h1 {
   white-space: nowrap;
 }
 .jc-a i { font-style: normal; font-size: 15px; }
+/* 上传/分析进度：拍照后自动走完并上报，不再让观众点确认 */
+.analyze {
+  margin-top: 10px;
+  padding: 14px 16px;
+  border: 1px solid var(--hair);
+  border-radius: var(--r);
+  background: var(--card);
+}
+.an-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 13px;
+}
+.an-head b {
+  font: 600 18px/1 var(--num);
+  font-variant-numeric: tabular-nums;
+}
+.an-track {
+  margin-top: 10px;
+  height: 6px;
+  border-radius: 999px;
+  background: #e8e5df;
+  overflow: hidden;
+}
+.an-track i {
+  display: block;
+  width: 0;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--ink);
+  transition: width 0.12s linear;
+}
+.an-note {
+  margin: 10px 0 0;
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--ink-3);
+}
+.analyze.is-done .an-track i { background: #177a55; }
+.analyze.is-error .an-track i { background: #b23b2e; }
+
+/* 右下角的小回执，替代整屏会诊 */
+.toast.is-corner {
+  left: auto;
+  right: 16px;
+  bottom: calc(var(--tab-h) + var(--safe-b) + 14px);
+  translate: 0 8px;
+  max-width: min(78vw, 300px);
+  border-radius: 14px;
+  text-align: left;
+  line-height: 1.45;
+}
+.toast.is-on.is-corner { translate: 0 0; }
