@@ -215,6 +215,7 @@ export class Monitor {
     root.add(this.group);
 
     this.timer = FIRST_ALARM;
+    this.gap = ALARM_GAP;   // 可被 build({ gap }) 覆盖：展台想更快就用 ?gap=秒数
     this.time = 0;
     this.round = 0;
     this.timers = [];
@@ -230,7 +231,8 @@ export class Monitor {
    * @param center_px  可选，点位限制在这个像素圆内（小区页签复用校园场景时用）
    * @param radius_px  与 center_px 配套的半径
    */
-  build({ count = 3, center_px = null, radius_px = 0 } = {}) {
+  build({ count = 3, center_px = null, radius_px = 0, gap = 0 } = {}) {
+    if (Number.isFinite(gap) && gap > 0) this.gap = Math.max(3, Math.min(60, gap));
     const nav_all = nav_for(this.scene, "all");
     if (!nav_all) return;
 
@@ -671,7 +673,7 @@ export class Monitor {
     inc.distance_m = len_m;
     inc.eta_s = eta_s;
 
-    this.timer = ALARM_GAP;
+    this.timer = this.gap;
     this.hooks.on_dispatched?.({ inc, agent: a, distance_m: len_m, eta_s });
   }
 

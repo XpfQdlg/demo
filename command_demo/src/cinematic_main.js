@@ -708,7 +708,12 @@ function make_monitor(tab, root, list) {
   });
   /* 8 个点位 / 8 起异常：讲解一轮十来分钟就能看到多种异常，
      间隔 12 秒（monitor 的 ALARM_GAP），镜头不会一直空着 */
-  m.build({ count: 12, ...(MONITOR_AREA[tab] || {}) });
+  /* 密度可在现场用 URL 调：?cams=16&gap=6（默认 12 个点位、9 秒一起）。
+     gap 会在 build 里夹到 3–60 秒，cams 夹到 3–24，别把总线打爆。 */
+  const q = new URLSearchParams(location.search);
+  const cams = Math.max(3, Math.min(24, Number(q.get("cams")) || 12));
+  const gap = Number(q.get("gap")) || 0;
+  m.build({ count: cams, ...(gap ? { gap } : {}), ...(MONITOR_AREA[tab] || {}) });
   window.__monitor = m;   // 调试用：验收脚本要读摄像头点位与报警状态
   /* 通知手机页换场景：旧场景里没闭环的预警，手机端会收尾掉 */
   publish_scene(tab);
