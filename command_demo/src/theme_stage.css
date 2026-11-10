@@ -1345,3 +1345,177 @@ body.map #stage::before, body.map #stage::after { display: none; }
   line-height: 1.6;
   color: rgba(218, 232, 236, 0.82);
 }
+
+/* ── 现场抓拍卡（CSS2D 挂在事发点） ─────────────────────────────────
+   锚点是 0 尺寸的 div，落在事件的地面坐标上；卡片朝上长，
+   底部引线接一个脉动圆点，明确「这张图拍的就是这儿」。 */
+
+.evi {
+  position: relative;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+.evi-card {
+  position: absolute;
+  left: var(--evi-dx, 0px);
+  bottom: 68px;
+  width: 196px;
+  padding: 5px 5px 0;
+  border-radius: 9px;
+  background: rgba(8, 13, 20, 0.92);
+  border: 1px solid color-mix(in srgb, var(--evi-c) 42%, transparent);
+  box-shadow:
+    0 10px 26px rgba(0, 0, 0, 0.45),
+    0 0 0 1px rgba(255, 255, 255, 0.03) inset,
+    0 0 22px color-mix(in srgb, var(--evi-c) 14%, transparent);
+  transform: translate(-50%, 8px) scale(0.94);
+  transform-origin: 50% 100%;
+  opacity: 0;
+  transition:
+    opacity 0.26s ease,
+    transform 0.36s cubic-bezier(0.2, 0.9, 0.3, 1.12);
+  backdrop-filter: blur(6px);
+}
+.evi.is-in .evi-card {
+  opacity: 1;
+  transform: translate(-50%, 0) scale(1);
+}
+.evi.is-out .evi-card {
+  opacity: 0;
+  transform: translate(-50%, -6px) scale(0.96);
+  transition-duration: 0.3s;
+}
+.evi-head {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 1px 3px 5px;
+  font-size: 9.5px;
+  letter-spacing: 0.06em;
+  color: var(--text-dim, #8595a7);
+}
+.evi-rec {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--evi-c);
+  box-shadow: 0 0 6px var(--evi-c);
+  animation: evi-blink 1.6s steps(2, end) infinite;
+}
+.evi-tag {
+  color: color-mix(in srgb, var(--evi-c) 72%, #ffffff);
+  font-weight: 600;
+}
+.evi-time {
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.82;
+}
+.evi-shot {
+  position: relative;
+  overflow: hidden;
+  border-radius: 6px;
+  background: #0a1018;
+  aspect-ratio: 4 / 3;
+}
+.evi-shot img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: saturate(0.92) contrast(1.04);
+}
+.evi-shot::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 0;
+  height: 34%;
+  background: linear-gradient(to top, rgba(5, 9, 14, 0.72), transparent);
+}
+.evi-meta {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 5px 4px 7px;
+  min-width: 0;
+}
+.evi-meta b {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #e6eef7;
+  white-space: nowrap;
+}
+.evi-meta span {
+  font-size: 9.5px;
+  color: var(--text-dim, #8595a7);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.evi-line {
+  position: absolute;
+  left: -0.5px;
+  bottom: 6px;
+  width: 1px;
+  height: 60px;
+  background: linear-gradient(to top, transparent, var(--evi-c));
+  opacity: 0.85;
+}
+.evi-pin {
+  position: absolute;
+  left: -3.5px;
+  bottom: -3.5px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--evi-c);
+  box-shadow:
+    0 0 0 2px rgba(6, 10, 16, 0.85),
+    0 0 10px var(--evi-c);
+}
+.evi.is-flip .evi-card {
+  bottom: auto;
+  top: 72px;
+  transform-origin: 50% 0;
+  transform: translate(-50%, -8px) scale(0.94);
+}
+.evi.is-flip.is-in .evi-card {
+  transform: translate(-50%, 0) scale(1);
+}
+.evi.is-flip .evi-line {
+  bottom: auto;
+  top: 4px;
+  height: 66px;
+  background: linear-gradient(to bottom, var(--evi-c), transparent 88%);
+}
+.evi-pin::after {
+  content: "";
+  position: absolute;
+  inset: -5px;
+  border-radius: 50%;
+  border: 1px solid var(--evi-c);
+  opacity: 0;
+  animation: evi-pulse 2.4s ease-out infinite;
+}
+@keyframes evi-blink {
+  50% {
+    opacity: 0.25;
+  }
+}
+@keyframes evi-pulse {
+  0% {
+    transform: scale(0.5);
+    opacity: 0.7;
+  }
+  70% {
+    transform: scale(1.9);
+    opacity: 0;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+
+

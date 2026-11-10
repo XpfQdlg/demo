@@ -73,21 +73,23 @@ if (existsSync(favicon)) {
   html = html.split("./favicon.svg").join(data_uri(favicon));
 }
 
-/* ── 3. public/cinematic 下的贴图与天空图 → 内联表 ─────────────────
-   键与源码里的相对路径一致，例如 cinematic/materials/asphalt/color.webp。
-   pbr.js 的 asset_url() 优先查这张表，其次才退回 document.baseURI。
+/* ── 3. public/cinematic 贴图 + public/photos 现场照 → 内联表 ─────────
+   键与源码里的相对路径一致，例如 cinematic/materials/asphalt/color.webp、
+   photos/campus-road-1.jpg。pbr.js 的 asset_url() 与 views/evidence.js
+   的 resolve_photo() 都优先查这张表，其次才退回 document.baseURI。
    file:// 下直接读本地图片会触发跨源限制，WebGL 上传纹理会失败。 */
-const publicDir = join(dist, "cinematic");
 const inline = {};
-if (existsSync(publicDir)) {
-  const walk = (dir) => {
-    for (const name of readdirSync(dir)) {
-      const full = join(dir, name);
+for (const sub of ["cinematic", "photos"]) {
+  const dir = join(dist, sub);
+  if (!existsSync(dir)) continue;
+  const walk = (d) => {
+    for (const name of readdirSync(d)) {
+      const full = join(d, name);
       if (statSync(full).isDirectory()) walk(full);
       else inline[relative(dist, full).split("\\").join("/")] = data_uri(full);
     }
   };
-  walk(publicDir);
+  walk(dir);
 }
 const keys = Object.keys(inline);
 if (!keys.length) console.warn("!! cinematic 素材目录为空");

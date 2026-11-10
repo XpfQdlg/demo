@@ -52,8 +52,24 @@ await ph.setViewport({ width: 390, height: 844, deviceScaleFactor: 2, isMobile: 
 await ph.goto(BASE + "/phone", { waitUntil: "networkidle2", timeout: 60000 });
 await ph.click("#join-cta");
 await new Promise((r) => setTimeout(r, 250));
+/* 演示照片的「分析进度」走 requestAnimationFrame：手机页一旦被切到后台，
+   进度条就停了、永远发不出上报。所以先等 POST /api/commands 真的发出去，
+   再把大屏页提到前面去等回执。 */
+const sent = new Promise((resolve) => {
+  ph.on("response", (r) => {
+    if (r.url().includes("/api/commands") && r.status() === 200) resolve();
+  });
+});
 await ph.click("#btn-demo");
-await new Promise((r) => setTimeout(r, 4200));
+await Promise.race([sent, new Promise((_, reject) => setTimeout(() => reject(new Error("手机页没有发出上报")), 30000))]);
+await st.bringToFront();
+/* 上报后要先跑四模型会诊再派单，回执卡出现的时间随当前场景浮动
+   （实测 3–9 秒），固定等 4 秒会偶发拍到「已受理，正在派单…」。 */
+await st.waitForFunction(() => document.querySelector("#visitorPing")?.classList.contains("on"), {
+  polling: 500,
+  timeout: 30000,
+});
+await new Promise((r) => setTimeout(r, 400));
 await st.screenshot({ path: "shots/live_ping.png" });
 console.log("phone", await ph.evaluate(() => document.querySelector("#toast")?.textContent));
 const ping = await st.evaluate(() => ({
@@ -62,6 +78,22 @@ const ping = await st.evaluate(() => ({
   verdict: document.querySelector("#visitorPingVerdict")?.textContent,
 }));
 console.log("ping", ping);
+
+/* 现场抓拍卡：报警后事发点上方应出现一张实拍图，且图片真的解码成功
+   （naturalWidth 为 0 说明 /photos 没传上去或被拦） */
+const evi = await st.evaluate(() => {
+  const el = document.querySelector(".evi");
+  const img = el?.querySelector("img");
+  return el
+    ? {
+        area: el.querySelector(".evi-meta b")?.textContent,
+        note: el.querySelector(".evi-meta span")?.textContent,
+        w: img?.naturalWidth || 0,
+        flip: el.classList.contains("is-flip"),
+      }
+    : null;
+});
+console.log("evidence", evi);
 
 /* 刷新一次：事件流应当从总线回放，而不是重新变空。
    注意手机页开着时大屏页是后台标签，rAF 会被节流，polling 不能留在默认的 "raf"。 */
@@ -85,6 +117,8 @@ const bad = [];
 if (screen.scene !== "campus") bad.push("大屏场景没起来");
 if (screen.cards !== 4) bad.push("模型卡数量不是 4");
 if (!String(ping.on || "").includes("on")) bad.push("回执卡没出现");
+if (!evi) bad.push("现场抓拍卡没出现");
+else if (!evi.w) bad.push("现场抓拍卡图片没解码");
 if (feed.length < 2) bad.push("刷新后事件流没有回放");
 if (errs.length) bad.push(`有 ${errs.length} 条错误`);
 if (bad.length) {

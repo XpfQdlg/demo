@@ -10,6 +10,7 @@ import { build_forest } from "./cine/scene_forest.js";
 import { Monitor } from "./cine/monitor.js";
 import { maquette_palette } from "./cine/maquette.js";
 import { mount_battle_map } from "./views/battle_map.js";
+import { make_evidence } from "./views/evidence.js";
 import { px_to_world, world_to_px } from "./map/coords.js";
 import { alert_stats, publish_incident, publish_scene } from "./core/alert_publish.js";
 import { install_phone_link } from "./views/phone_link.js";
@@ -1108,6 +1109,10 @@ const marker_group = new THREE.Group();
 marker_group.name = "markers";
 marker_group.userData.no_merge = true;
 
+/* 现场抓拍卡也挂在 marker 组里：切场景 / 重建标记时一起清掉 */
+const evidence = make_evidence(marker_group, { floor_y: () => monitor?.floor_y ?? 0 });
+window.__evidence = evidence;   // 调试用：验收脚本要确认卡片真的挂上了
+
 function label_of(a, i) {
   /* 按类型分别编号：dog-1、dog-2、person-1，讲解员报得出来 */
   const same = agents.slice(0, i).filter((x) => x.type === a.type).length + 1;
@@ -1217,6 +1222,8 @@ function build_markers() {
   /* 旧场景的气泡挂在已卸载的设备上，留着每帧还会去读那两个实体 */
   bubbles = [];
   marker_group.clear();
+  /* 抓拍卡指向的是上一个场景的坐标，切过来必须一起收掉 */
+  evidence.clear();
   agents.forEach((a, i) => {
     const sp = make_badge(label_of(a, i));
     sp.userData.agent = a;
@@ -1505,6 +1512,14 @@ function on_camera_alarm({ inc }) {
   const model = scene_model_of(monitor_tab());
   /* 抬到 5.5 米：气泡画在事发点正上方，放得太低会把地面的光圈整个盖住 */
   pop_bubble_at({ px: inc.px }, fy + 5.5, `${inc.area}发现${inc.name}`);
+  evidence.show({
+    scene: monitor_tab(),
+    px: inc.px,
+    area: inc.area,
+    name: inc.name,
+    kind: inc.kind,
+    camera: inc.camera,
+  });
   log_event(`【${model.short}】${inc.area}发现${inc.name}`, "warn");
   deck_alert(monitor_tab(), inc.name);
   chain_stage(1, "识别 → 研判");

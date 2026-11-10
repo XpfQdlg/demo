@@ -6,6 +6,7 @@ import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js"
 import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
 import { SMAAPass } from "three/addons/postprocessing/SMAAPass.js";
 import { ShaderPass } from "three/addons/postprocessing/ShaderPass.js";
+import { CSS2DRenderer } from "three/addons/renderers/CSS2DRenderer.js";
 
 /* ══════════════════════════════════════════════════════════════════════════
    Cinematic — 画质优先的渲染核心
@@ -106,6 +107,18 @@ export class Cinematic {
     r.shadowMap.type = THREE.PCFSoftShadowMap;
     stage.appendChild(r.domElement);
     this.renderer = r;
+
+    /* 标签层：事件抓拍卡、设备铭牌这类 DOM 标签走 CSS2D，
+       文字不参与 3D 采样，怎么推拉镜头都是屏幕尺寸的清晰度。 */
+    this.labelRenderer = new CSS2DRenderer();
+    this.labelRenderer.setSize(innerWidth, innerHeight);
+    const lr = this.labelRenderer.domElement;
+    lr.style.position = "absolute";
+    lr.style.top = "0";
+    lr.style.left = "0";
+    lr.style.pointerEvents = "none";
+    lr.className = "label-layer";
+    stage.appendChild(lr);
 
     this.scene = new THREE.Scene();
     this.camera = new THREE.PerspectiveCamera(52, innerWidth / innerHeight, 0.1, 4000);
@@ -656,6 +669,7 @@ export class Cinematic {
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(w, h);
+    this.labelRenderer.setSize(w, h);
     this.composer.setSize(w, h);
     this.gtao.setSize(w, h);
     this.smaa.setSize(w, h);
@@ -732,5 +746,6 @@ export class Cinematic {
     if ((this._shadow_tick++ & 1) === 0) this.sun.shadow.needsUpdate = true;
 
     this.composer.render();
+    this.labelRenderer.render(this.scene, this.camera);
   }
 }
