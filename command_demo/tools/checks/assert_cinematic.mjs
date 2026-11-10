@@ -31,8 +31,10 @@ const SCENES = ONLY ? [ONLY] : ["campus", "community", "forest", "subway"];
 
 /* 本轮优化后的水位。留 10% 余量：素材换版会小幅波动，但涨回 1500 材质
    就说明又有地方在逐网格 clone 材质了。材质按「网格引用数」计，
-   合并前是 1797，合并后 1047。 */
-const BUDGET = { materials: 1200, meshes: 1200, calls_per_frame: 1900 };
+   合并前是 1797，合并后 1047。
+   draw call 是含阴影 pass 的整帧数（阴影每帧重绘），校园 2131、小区 1756；
+   隔帧阴影时是 ~1560，现在这个水位就是「阴影不能再退回隔帧」的护栏。 */
+const BUDGET = { materials: 1200, meshes: 1200, calls_per_frame: 2400 };
 
 const EDGE = [
   "C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe",

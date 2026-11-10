@@ -26,7 +26,9 @@ const b = await puppeteer.launch({
   headless: "new",
   // 本机开着系统代理（127.0.0.1:17897），公网 IP 不在 bypass 列表里，
   // 不显式绕开时浏览器请求会走代理并拿到 502，curl 则直连正常。
-  args: ["--enable-unsafe-swiftshader", "--use-angle=swiftshader", "--hide-scrollbars", "--no-proxy-server"],
+  // 渲染走硬件（D3D11）：软件光栅下 MSAA 4× 一帧要一两秒，截图会把
+  // 10 秒的回执窗口等过去，验收就会拍到一张已经收起的空卡。
+  args: ["--use-angle=d3d11", "--hide-scrollbars", "--no-proxy-server"],
 });
 
 const errs = [];
@@ -36,6 +38,11 @@ st.on("console", (m) => m.type() === "error" && errs.push("screen-console: " + m
 st.on("response", (r) => r.status() >= 500 && errs.push(`screen-http: ${r.status()} ${r.url()}`));
 await st.setViewport({ width: 1600, height: 900 });
 await st.goto(BASE + "/", { waitUntil: "domcontentloaded", timeout: 60000 });
+/* 自动轮播每 45 秒切一次场景，切场景会清掉回执与抓拍卡。
+   验收期间把它钉住，否则告警刚好撞上切换就永远抓不到。 */
+await st.evaluate(() => {
+  window.__auto_paused = true;
+});
 await new Promise((r) => setTimeout(r, 18000));
 await st.screenshot({ path: "shots/live_desktop.png" });
 const screen = await st.evaluate(() => ({
@@ -65,13 +72,18 @@ await Promise.race([sent, new Promise((_, reject) => setTimeout(() => reject(new
 await st.bringToFront();
 /* 上报后要先跑四模型会诊再派单，回执卡出现的时间随当前场景浮动
    （实测 3–9 秒），固定等 4 秒会偶发拍到「已受理，正在派单…」。 */
+/* 先等回执卡出现，再等「会诊 + 派单」落定（文案变成「已派 …」）。
+   只等 .on 会在「已受理，正在派单…」时就读，抓拍卡那时还没弹。 */
 await st.waitForFunction(() => document.querySelector("#visitorPing")?.classList.contains("on"), {
   polling: 500,
   timeout: 30000,
 });
-await new Promise((r) => setTimeout(r, 400));
-await st.screenshot({ path: "shots/live_ping.png" });
-console.log("phone", await ph.evaluate(() => document.querySelector("#toast")?.textContent));
+await st.waitForFunction(
+  () => /已派/.test(document.querySelector("#visitorPingVerdict")?.textContent || ""),
+  { polling: 500, timeout: 40000 }
+);
+/* 先读 DOM 再截图：截图在软件光栅下可能要十几秒，
+   而回执 10 秒就收起、抓拍卡 13 秒收起，顺序反了会拍到空画面。 */
 const ping = await st.evaluate(() => ({
   on: document.querySelector("#visitorPing")?.className,
   title: document.querySelector("#visitorPingTitle")?.textContent,
@@ -95,8 +107,14 @@ const evi = await st.evaluate(() => {
 });
 console.log("evidence", evi);
 
+await st.screenshot({ path: "shots/live_ping.png" });
+console.log("phone", await ph.evaluate(() => document.querySelector("#toast")?.textContent));
+
 /* 刷新一次：事件流应当从总线回放，而不是重新变空。
-   注意手机页开着时大屏页是后台标签，rAF 会被节流，polling 不能留在默认的 "raf"。 */
+   先等告警生命周期走完（派单、到达、处置各一条 keepalive POST）：
+   刚弹回执就刷新会把在途请求截断，服务端读不到完整 JSON 会回 400，
+   控制台里就多两条假错误。 */
+await new Promise((r) => setTimeout(r, 9000));
 await st.bringToFront();
 await st.reload({ waitUntil: "domcontentloaded", timeout: 60000 });
 await st.waitForFunction(() => document.querySelectorAll("#feedRows .feed-row").length > 0, {

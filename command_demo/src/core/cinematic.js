@@ -149,11 +149,9 @@ export class Cinematic {
     this.sun.shadow.mapSize.set(2048, 2048);
     this.sun.shadow.bias = -0.00035;
     this.sun.shadow.normalBias = 0.06;
-    /* 阴影图按隔帧刷新：机器人走动的影子 30Hz 看不出顿，
-       但省略掉的是一整张 2048² 场景深度重绘。 */
-    this.sun.shadow.autoUpdate = false;
+    /* 阴影每帧重绘：隔帧方案会让走动的人影在大屏上跳，见 _loop 里的注释 */
+    this.sun.shadow.autoUpdate = true;
     this.sun.shadow.needsUpdate = true;
-    this._shadow_tick = 0;
     this.scene.add(this.sun);
     this.scene.add(this.sun.target);
 
@@ -162,7 +160,21 @@ export class Cinematic {
     this.scene.add(this.hemi);
 
     /* ── 后期管线 ────────────────────────────────────────────────── */
-    this.composer = new EffectComposer(r);
+    /* 场景先渲进一张 MSAA 的 HDR 目标，再交给后期链采样：
+       SMAA 只能修「已经画出来的边」，修不了远景窗格、贴地线条这种
+       亚像素几何——相机慢慢转的时候它们会爬行、发毛刺。MSAA 在光栅化
+       阶段就把覆盖率的边缘算进去，正好补上这一段。
+       4× 在 1600×900 下约多花 20% 帧时间（RTX 5060：78 → 62 fps）；
+       四核以下的机器退到 2×，`?msaa=0/2/4` 可以现场覆盖。 */
+    const params = new URLSearchParams(location.search);
+    const cores = navigator.hardwareConcurrency || 4;
+    const msaa = Number(params.get("msaa") ?? (cores <= 4 ? 2 : 4));
+    const buf = r.getDrawingBufferSize(new THREE.Vector2());
+    const hdr = new THREE.WebGLRenderTarget(buf.x, buf.y, {
+      type: THREE.HalfFloatType,
+      samples: Number.isFinite(msaa) ? Math.max(0, Math.min(4, msaa)) : 4,
+    });
+    this.composer = new EffectComposer(r, hdr);
     this.composer.addPass(new RenderPass(this.scene, this.camera));
 
     this.gtao = new GTAOPass(this.scene, this.camera, innerWidth, innerHeight);
@@ -742,8 +754,9 @@ export class Cinematic {
     /* 强度决定 Bloom 是否值得跑：沙盘白天 0.06，整条 mip 链看不见却每帧都在算 */
     this.bloom.enabled = this._bloom_want !== false && this.bloom.strength > 0.08;
 
-    /* 阴影隔帧重绘；切机位/切场景后的第一帧由 needsUpdate 兜住 */
-    if ((this._shadow_tick++ & 1) === 0) this.sun.shadow.needsUpdate = true;
+    /* 阴影每帧重绘。曾经为了省一半阴影 pass 改成隔帧 + needsUpdate，
+       结果人和车的影子在 30 Hz 上跳，大屏上看着就是「地面在抖」；
+       实测隔帧方案只省约 20% 帧时间，换来的观感损失不值得。 */
 
     this.composer.render();
     this.labelRenderer.render(this.scene, this.camera);

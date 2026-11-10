@@ -911,7 +911,11 @@ async function cycle_to(name) {
 }
 
 function start_autorun() {
+  /* `?auto=0` 或验收脚本设 __auto_paused：把自动轮播钉住，
+     否则上报回执/抓拍卡会在场景切换时被 cleared，验收永远抓不稳。 */
+  if (new URLSearchParams(location.search).get("auto") === "0") window.__auto_paused = true;
   setInterval(() => {
+    if (window.__auto_paused) return;
     if (cycling || busy) return;
     /* 开场先让操作员把第一段讲完，45 秒后才开始自己转 */
     if (Date.now() - boot_at < 45000) return;
