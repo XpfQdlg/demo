@@ -40,10 +40,10 @@ const KIND_NAME = {
 };
 const SCENE_NAME = { campus: "校园", community: "小区", forest: "西山林区", subway: "地铁站厅" };
 
-const FIRST_ALARM = 7;    // 场景加载后首起报警，留出镜头安顿的时间
-const ALARM_GAP = 12;     // 相邻两起报警的间隔（展台节奏：20 分钟能讲四五轮）
+const FIRST_ALARM = 5;    // 场景加载后首起报警，留出镜头安顿的时间
+const ALARM_GAP = 9;     // 相邻两起报警的间隔：点位多、间隔短，事件流一直有东西进来
 const RETRY_GAP = 5;      // 没有空闲设备、或没有可达路径时的重试间隔
-const CYCLE_GAP = 45;     // 一轮全部处置完后，隔多久重新开一轮
+const CYCLE_GAP = 30;    // 一轮全部处置完后隔多久重新开一轮（别让大屏冷场）
 const COVERAGE_PX = 60;   // 摄像头覆盖半径，30 米
 const SCAN_S = 1.8;       // 到场后的扫描时间
 const HANDLE_S = 3.2;     // 扫描完到处置完成的时间

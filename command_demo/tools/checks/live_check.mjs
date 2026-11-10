@@ -110,22 +110,24 @@ console.log("evidence", evi);
 await st.screenshot({ path: "shots/live_ping.png" });
 console.log("phone", await ph.evaluate(() => document.querySelector("#toast")?.textContent));
 
-/* 刷新一次：事件流应当从总线回放，而不是重新变空。
-   先等告警生命周期走完（派单、到达、处置各一条 keepalive POST）：
-   刚弹回执就刷新会把在途请求截断，服务端读不到完整 JSON 会回 400，
-   控制台里就多两条假错误。 */
-await new Promise((r) => setTimeout(r, 9000));
-await st.bringToFront();
-await st.reload({ waitUntil: "domcontentloaded", timeout: 60000 });
-await st.waitForFunction(() => document.querySelectorAll("#feedRows .feed-row").length > 0, {
+/* 再开一个标签页：事件流应当从总线回放，而不是新页面从空开始。
+   这里不用 reload——刷新会掐掉在途的 keepalive POST，服务端读到半截 JSON
+   回 400、控制台多几条假错误；新开一页同样证明「数据在服务端」，
+   而且更接近观众换一台设备打开的场景。 */
+const st2 = await b.newPage();
+st2.on("pageerror", (e) => errs.push("restore: " + e.message));
+st2.on("response", (r) => r.status() >= 500 && errs.push(`restore-http: ${r.status()} ${r.url()}`));
+await st2.setViewport({ width: 1600, height: 900 });
+await st2.goto(BASE + "/cinematic.html?scene=campus", { waitUntil: "domcontentloaded", timeout: 60000 });
+await st2.waitForFunction(() => document.querySelectorAll("#feedRows .feed-row").length > 0, {
   polling: 1000,
   timeout: 60000,
 });
 await new Promise((r) => setTimeout(r, 800));
-const feed = await st.evaluate(() =>
+const feed = await st2.evaluate(() =>
   [...document.querySelectorAll("#feedRows .feed-row")].map((r) => r.textContent.trim())
 );
-await st.screenshot({ path: "shots/live_restore.png" });
+await st2.screenshot({ path: "shots/live_restore.png" });
 console.log("feed after reload", feed.length, feed.slice(0, 2));
 
 console.log("errors", errs.slice(0, 3));

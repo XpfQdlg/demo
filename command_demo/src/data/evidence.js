@@ -22,7 +22,8 @@ function photo_src(name) {
 }
 
 /* 每个场景只登记「手里真有照片」的类型，和 SCENE_MODELS.alert_kinds 一一对应。
-   同类型给 2–4 张，按事发点做稳定哈希轮换，同一起报警刷新后还是同一张。 */
+   同类型给 2–6 张，按事发点做稳定哈希轮换，同一起报警刷新后还是同一张。
+   要多出事件就得让同一类型有更多张不同的图——重复三次全一样，观众就当摆设了。 */
 export const EVIDENCE_PHOTOS = {
   campus: {
     smoke: [
@@ -33,11 +34,16 @@ export const EVIDENCE_PHOTOS = {
     ],
     ebike: [{ src: photo_src("campus-road-3"), note: "环湖路 · 一辆电动车载两人" }],
     parking: [{ src: photo_src("campus-road-2"), note: "东门主路 · 车轮压住黄格线" }],
-    hydrant: [{ src: photo_src("campus-hydrant-1"), note: "绿化带 · 消防栓被草叶遮住" }],
+    hydrant: [
+      { src: photo_src("campus-hydrant-1"), note: "绿化带 · 消防栓被草叶遮住" },
+      { src: photo_src("hydrant-2"), note: "楼前 · 栓体陷进灌木" },
+      { src: photo_src("hydrant-3"), note: "路边 · 栓体被杂草围住" },
+    ],
     exit: [
       { src: photo_src("campus-exit-1"), note: "楼道 · 绿色安全出口牌" },
       { src: photo_src("exit-2"), note: "东侧楼梯 · 出口指示牌" },
       { src: photo_src("exit-3"), note: "走廊尽头 · 疏散指示" },
+      { src: photo_src("exit-5"), note: "楼梯间 · 应急指示牌" },
     ],
   },
   community: {
@@ -45,14 +51,20 @@ export const EVIDENCE_PHOTOS = {
       { src: photo_src("community-ext-1"), note: "楼道 · 灭火器箱门敞开" },
       { src: photo_src("ext-2"), note: "一层门厅 · 红色器材箱" },
       { src: photo_src("ext-3"), note: "消防柜 · 器材状态" },
+      { src: photo_src("ext-5"), note: "走廊 · 器材箱与记录卡" },
+      { src: photo_src("ext-6"), note: "楼梯口 · 灭火器摆放" },
       { src: photo_src("community-corridor-3"), note: "楼梯口 · 挂墙灭火器" },
     ],
     exit: [
       { src: photo_src("community-exit-1"), note: "安全出口 · 门上方指示牌" },
       { src: photo_src("community-corridor-2"), note: "楼道 · 出口牌与应急灯" },
       { src: photo_src("exit-4"), note: "通道 · 疏散指示牌" },
+      { src: photo_src("exit-6"), note: "走廊 · 应急灯与出口牌" },
     ],
-    hydrant: [{ src: photo_src("community-hydrant-1"), note: "楼前草地 · 消防栓被灌木围住" }],
+    hydrant: [
+      { src: photo_src("community-hydrant-1"), note: "楼前草地 · 消防栓被灌木围住" },
+      { src: photo_src("hydrant-4"), note: "楼侧 · 栓体半埋在草丛" },
+    ],
   },
   subway: {
     door: [
@@ -62,10 +74,12 @@ export const EVIDENCE_PHOTOS = {
     ext: [
       { src: photo_src("subway-ext-1"), note: "站厅 · 消防柜与灭火器" },
       { src: photo_src("ext-4"), note: "通道口 · 红色器材箱" },
+      { src: photo_src("ext-5"), note: "设备间外 · 器材箱" },
     ],
     exit: [
       { src: photo_src("subway-corridor-1"), note: "站厅通道 · 安全出口牌" },
       { src: photo_src("exit-3"), note: "楼梯口 · 疏散指示" },
+      { src: photo_src("exit-5"), note: "站台层 · 应急指示牌" },
     ],
   },
   forest: {
@@ -76,10 +90,12 @@ export const EVIDENCE_PHOTOS = {
       { src: photo_src("forest-smoke-3"), note: "林道口 · 树下吸烟" },
       { src: photo_src("forest-smoke-5"), note: "灌木边 · 吸烟停留" },
     ],
-    hydrant: [{ src: photo_src("forest-hydrant-1"), note: "林区 · 消防栓被杂草埋住" }],
+    hydrant: [
+      { src: photo_src("forest-hydrant-1"), note: "林区 · 消防栓被杂草埋住" },
+      { src: photo_src("hydrant-3"), note: "林缘 · 栓体被草叶覆盖" },
+    ],
   },
 };
-
 /* 稳定哈希：同一起报警（场景+位置+类型）永远落同一张照片 */
 function hash01(text) {
   let h = 2166136261;

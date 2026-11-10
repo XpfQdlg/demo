@@ -708,7 +708,7 @@ function make_monitor(tab, root, list) {
   });
   /* 8 个点位 / 8 起异常：讲解一轮十来分钟就能看到多种异常，
      间隔 12 秒（monitor 的 ALARM_GAP），镜头不会一直空着 */
-  m.build({ count: 8, ...(MONITOR_AREA[tab] || {}) });
+  m.build({ count: 12, ...(MONITOR_AREA[tab] || {}) });
   window.__monitor = m;   // 调试用：验收脚本要读摄像头点位与报警状态
   /* 通知手机页换场景：旧场景里没闭环的预警，手机端会收尾掉 */
   publish_scene(tab);
@@ -1362,7 +1362,7 @@ function update_agent_rows() {
   }
 }
 
-/** 事件流：最新在上，超过八条丢最老的 */
+/** 事件流：最新在上，保留最近十二条（面板 max-height 546px 装得下） */
 function log_event(text, kind = "") {
   prepend_feed(Date.now(), text, kind);
 }
@@ -1378,7 +1378,7 @@ function prepend_feed(ts, text, kind = "") {
   t.textContent = `${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
   row.append(t, document.createTextNode(text));
   feedRowsEl.prepend(row);
-  while (feedRowsEl.children.length > 8) feedRowsEl.lastChild.remove();
+  while (feedRowsEl.children.length > 12) feedRowsEl.lastChild.remove();
 }
 
 /**
@@ -1426,7 +1426,7 @@ async function restore_feed() {
   }
 
   rows.sort((a, b) => a.ts - b.ts);
-  for (const r of rows.slice(-8)) prepend_feed(r.ts, r.text, r.kind);
+  for (const r of rows.slice(-12)) prepend_feed(r.ts, r.text, r.kind);
   deck_restore(scene_counts);
 }
 
