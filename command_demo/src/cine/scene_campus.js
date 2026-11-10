@@ -2,7 +2,7 @@ import * as THREE from "three";
 import { pbr, preload } from "../core/pbr.js";
 import { make_building, lit_glass_set, add_roof_clutter, add_distant_town } from "./building.js";
 import { tree, street_lamp, bench, bin, railing } from "./props.js";
-import { build_hill, scatter_hill_trees } from "../map/terrain.js";
+import { build_hill, height_at } from "../map/terrain.js";
 import { add_community } from "./scene_community.js";
 import { add_robots } from "./robots.js";
 import { slabify } from "./rectify.js";
@@ -93,20 +93,31 @@ function add_forest_belt(root) {
   const campus = PACKAGE.zones?.campus?.polygon || [];
   const path = PACKAGE.forest_path?.polygon || [];
 
-  /* 林下地面：深绿薄片，边界一眼能认出是林地 */
-  for (const poly of forests) {
-    const pts = to_world(poly).map(([x, z]) => new THREE.Vector2(x, -z));
-    const geo = new THREE.ShapeGeometry(new THREE.Shape(pts));
-    geo.rotateX(-Math.PI / 2);
-    const patch = new THREE.Mesh(
-      geo,
-      pbr("grass", { repeat: 1 / 6, normalScale: 1.2, tint: 0x101b12 })
-    );
-    patch.position.y = 0.02;
-    patch.receiveShadow = true;
-    patch.userData.no_merge = true;
-    root.add(patch);
-  }
+  /* 森林山体：与森林页签同一份数据、同一座山（见 scene_forest.js）。
+     校园西侧、东北、北侧各有一片林子，长在各自的小山上，山脚与地面平滑衔接。 */
+  const RIDGE_MAIN = [
+    [160, 100], [220, 400], [280, 650], [260, 900], [170, 1040],
+  ];
+  const flatten = path.length >= 3 ? [path] : [];
+  const forest_mat = pbr("grass", { repeat: 1 / 6, normalScale: 1.2, tint: 0x101b12 });
+  const hills = [];
+  forests.forEach((poly, i) => {
+    if (poly.length < 3) return;
+    const hill = {
+      polygon: poly,
+      ridge: i === 0 ? RIDGE_MAIN : null,
+      peak_m: i === 0 ? 40 : 30,
+      roughness: 0.42,
+      id: `forest-hill-${i}`,
+    };
+    hills.push(hill);
+    root.add(build_hill(hill, {
+      seg: i === 0 ? 60 : 40,
+      flatten: i === 0 ? flatten : [],
+      flatten_smooth: 40,
+      material: forest_mat,
+    }));
+  });
 
   let seed = 20261108;
   const rnd = () => {
@@ -114,14 +125,17 @@ function add_forest_belt(root) {
     return seed / 4294967296;
   };
 
-  for (const poly of forests) {
+  for (let fi = 0; fi < forests.length; fi++) {
+    const poly = forests[fi];
+    const hill = hills[fi];
+    const fl = fi === 0 ? flatten : [];
     const xs = poly.map((p) => p[0]);
     const ys = poly.map((p) => p[1]);
     const x0 = Math.min(...xs), x1 = Math.max(...xs);
     const y0 = Math.min(...ys), y1 = Math.max(...ys);
     const area_ha = ((x1 - x0) * (y1 - y0) * MPP * MPP) / 10000;
-    /* 每公顷 60 棵，上限 1800 棵。合并静态几何后只多几次绘制调用 */
-    const n = Math.min(1800, Math.round(area_ha * 60));
+    /* 每公顷 110 棵，上限 3000 棵，让森林更密。合并静态几何后只多几次绘制调用 */
+    const n = Math.min(3000, Math.round(area_ha * 110));
     let placed = 0;
     for (let i = 0; i < n * 8 && placed < n; i++) {
       const px = x0 + rnd() * (x1 - x0);
@@ -131,8 +145,9 @@ function add_forest_belt(root) {
       if (campus.length >= 3 && inside_poly(campus, px, py)) continue;
       if (path.length >= 3 && inside_poly(path, px, py)) continue;
       const [x, z] = PW(px, py);
-      const t = tree({ h: 7 + rnd() * 6, seed: 7000 + placed, tone: placed });
-      t.position.set(x, 0, z);
+      const h = hill ? height_at(hill, px, py, fl, 40) : 0;
+      const t = tree({ h: 8 + rnd() * 7, seed: 7000 + placed, tone: placed });
+      t.position.set(x, h, z);
       t.rotation.y = rnd() * Math.PI * 2;
       root.add(t);
       placed++;
@@ -146,7 +161,7 @@ function make_roads(group) {
   if (!R) return;
 
   /* 沥青路面：压到接近黑，环境反射调低，否则整条路会泛白 */
-  const road_mat = new THREE.MeshStandardMaterial({ color: 0x1a1e23, roughness: 0.98, metalness: 0.0, envMapIntensity: 0.03 });
+  const road_mat = new THREE.MeshStandardMaterial({ color: 0x1a1e23, roughness: 0.98, metalness: 0.0, envMapIntensity: 0.03, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -6 });
   const line_mat = new THREE.MeshStandardMaterial({ color: 0xe6e4dc, roughness: 0.82 });
 
   for (const s of R.surface) {
@@ -274,6 +289,7 @@ export async function build_campus(cine) {
       geo,
       new THREE.MeshStandardMaterial({
         color: 0x14200f, roughness: 1.0, metalness: 0.0, envMapIntensity: 0.04,
+        polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -2,
       })
     );
     base.position.y = 0.02;
@@ -328,6 +344,13 @@ export async function build_campus(cine) {
       } else {
         flatMat = pbr("grass", { repeat: 1 / 4, tint: 0x18231a, normalScale: 1.0 });
       }
+
+      /* 贴地层加深度偏移：与校园底盘、路面在远距掠射角下分层，不闪；
+         不同 kind 再错开一档，重叠的操场（跑道/内场/铺装）不互相闪。 */
+      flatMat = flatMat.clone();
+      flatMat.polygonOffset = true;
+      flatMat.polygonOffsetFactor = -1;
+      flatMat.polygonOffsetUnits = { water: -3, plaza: -4, sports: -5, green: -6 }[b.kind] ?? -4;
 
       const pts = to_world(b.polygon).map(([x, z]) => new THREE.Vector2(x, -z));
       const geo = new THREE.ShapeGeometry(new THREE.Shape(pts));

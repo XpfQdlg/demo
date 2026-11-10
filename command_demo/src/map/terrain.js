@@ -83,7 +83,7 @@ function signed_dist_to_polygon(poly, x, y) {
  * flatten 是一组多边形，落进去的地方高度压到 0，向外 smooth 米线性抬回。
  * 巡检空地必须压平，否则平地薄片会被抬高的地形埋掉。
  */
-function height_at(hill, px, py, flatten = [], smooth = 14.0) {
+export function height_at(hill, px, py, flatten = [], smooth = 14.0) {
   const poly = hill.polygon;
   const xs = poly.map((p) => p[0]);
   const ys = poly.map((p) => p[1]);

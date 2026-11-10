@@ -618,7 +618,7 @@ const FOREST_POLYS = PACKAGE.zones?.forest?.forests?.length
 const VIEWS = {
   campus: view_of([CAMPUS_POLY], { theta: 5.29, phi: 0.54, fit: 0.64, env: 0.55 }),
   community: view_of([COMM_POLY], { theta: 0.95, phi: 0.95, fit: 1.14, env: 0.58 }),
-  forest: view_of(FOREST_POLYS, { theta: 4.2, phi: 0.60, fit: 0.42, env: 0.6 }),
+  forest: view_of(FOREST_POLYS.slice(0, 1), { theta: 4.2, phi: 0.60, fit: 0.42, env: 0.6 }),
   subway: { theta: 1.5708, phi: 0.02, fit: 0.3, env: 0.55 },
 };
 

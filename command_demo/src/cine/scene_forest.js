@@ -2,6 +2,7 @@ import * as THREE from "three";
 import { pbr, preload } from "../core/pbr.js";
 import { tree } from "./props.js";
 import { add_robots } from "./robots.js";
+import { build_hill, height_at } from "../map/terrain.js";
 import PACKAGE from "../map/data/map_package.json";
 
 /* ══════════════════════════════════════════════════════════════════════════
@@ -50,23 +51,46 @@ export async function build_forest(cine) {
   lawn.receiveShadow = true;
   root.add(lawn);
 
-  /* 森林地面：深绿贴片，压住底盘，边界一眼能认出来 */
-  for (const poly of forests) {
-    const pts = to_world(poly).map(([x, z]) => new THREE.Vector2(x, -z));
-    const geo = new THREE.ShapeGeometry(new THREE.Shape(pts));
-    geo.rotateX(-Math.PI / 2);
-    const patch = new THREE.Mesh(
-      geo,
-      pbr("grass", { repeat: 1 / 4, normalScale: 1.2, tint: 0x4b6338 })
-    );
-    patch.position.y = 0.04;
-    patch.receiveShadow = true;
-    root.add(patch);
-  }
-
-  /* 林间道路：数据包里给的折线，压在地面上 */
+  /* 森林山体：森林长在一座南北向的小山上。
+     旧图有西山（scene_extra），换新图后坐标对不上，这里用森林带自身的
+     轮廓重新造山。山脊沿森林带纵向中线走，峰值 40 米；
+     林间道路与火点空地压平，设备照常进林。 */
   const path_pts = PACKAGE.forest_path?.points || [];
   const path_poly = PACKAGE.forest_path?.polygon || [];
+
+  const RIDGE_MAIN = [
+    [160, 100], [220, 400], [280, 650], [260, 900], [170, 1040],
+  ];
+  const flatten = [];
+  if (path_poly.length >= 3) flatten.push(path_poly);
+  /* 火点空地：以林间道路中段为中心压平一块，别让火埋进山里 */
+  const fire_px = path_pts.length >= 3 ? path_pts[Math.floor(path_pts.length * 0.42)] : [W / 2, H / 2];
+  flatten.push([
+    [fire_px[0] - 42, fire_px[1] - 42],
+    [fire_px[0] + 42, fire_px[1] - 42],
+    [fire_px[0] + 42, fire_px[1] + 42],
+    [fire_px[0] - 42, fire_px[1] + 42],
+  ]);
+
+  /* 每块森林各造一座山。西侧主林带（第一块）用纵向山脊，
+     东北与北侧的小块用质心钟形即可。 */
+  const hills = [];
+  forests.forEach((poly, i) => {
+    if (poly.length < 3) return;
+    const hill = {
+      polygon: poly,
+      ridge: i === 0 ? RIDGE_MAIN : null,
+      peak_m: i === 0 ? 40 : 30,
+      roughness: 0.42,
+      id: `forest-hill-${i}`,
+    };
+    hills.push(hill);
+    root.add(build_hill(hill, {
+      seg: i === 0 ? 60 : 40,
+      flatten: i === 0 ? flatten : [],
+      flatten_smooth: 40,
+    }));
+  });
   if (path_pts.length >= 2) {
     const w = PACKAGE.forest_path.width_m || 6;
     const left = [];
@@ -104,7 +128,10 @@ export async function build_forest(cine) {
   };
   const on_path = (px, py) => path_poly.length >= 3 && inside(path_poly, px, py);
 
-  for (const poly of forests) {
+  for (let fi = 0; fi < forests.length; fi++) {
+    const poly = forests[fi];
+    const hill = hills[fi];
+    const fl = fi === 0 ? flatten : [];
     const xs = poly.map((p) => p[0]);
     const ys = poly.map((p) => p[1]);
     const x0 = Math.min(...xs);
@@ -112,16 +139,17 @@ export async function build_forest(cine) {
     const y0 = Math.min(...ys);
     const y1 = Math.max(...ys);
     const area_ha = ((x1 - x0) * (y1 - y0) * MPP * MPP) / 10000;
-    const n = Math.min(900, Math.round(area_ha * 70));
+    const n = Math.min(2600, Math.round(area_ha * 110));
     let placed = 0;
-    for (let i = 0; i < n * 6 && placed < n; i++) {
+    for (let i = 0; i < n * 8 && placed < n; i++) {
       const px = x0 + rnd() * (x1 - x0);
       const py = y0 + rnd() * (y1 - y0);
       if (!inside(poly, px, py)) continue;
       if (on_path(px, py)) continue;
       const [x, z] = PW(px, py);
-      const t = tree({ h: 7 + rnd() * 6, seed: 5200 + placed, tone: placed });
-      t.position.set(x, 0, z);
+      const h = hill ? height_at(hill, px, py, fl, 40) : 0;
+      const t = tree({ h: 8 + rnd() * 7, seed: 5200 + placed, tone: placed });
+      t.position.set(x, h, z);
       t.rotation.y = rnd() * Math.PI * 2;
       root.add(t);
       placed++;
@@ -131,17 +159,21 @@ export async function build_forest(cine) {
   /* 石头：林下裸露的基岩 */
   const rockMat = pbr("rock", { repeat: 2, normalScale: 1.6, tint: 0x8b877d });
   for (let i = 0; i < 30; i++) {
-    const poly = forests[(i * 7) % forests.length];
+    const fi = (i * 7) % forests.length;
+    const poly = forests[fi];
     if (!poly) break;
+    const hill = hills[fi];
+    const fl = fi === 0 ? flatten : [];
     const xs = poly.map((p) => p[0]);
     const ys = poly.map((p) => p[1]);
     const px = Math.min(...xs) + rnd() * (Math.max(...xs) - Math.min(...xs));
     const py = Math.min(...ys) + rnd() * (Math.max(...ys) - Math.min(...ys));
     if (!inside(poly, px, py) || on_path(px, py)) continue;
     const [x, z] = PW(px, py);
+    const h = hill ? height_at(hill, px, py, fl, 40) : 0;
     const s = 0.7 + rnd() * 1.6;
     const rock = new THREE.Mesh(new THREE.IcosahedronGeometry(s, 0), rockMat);
-    rock.position.set(x, s * 0.3, z);
+    rock.position.set(x, h + s * 0.3, z);
     rock.rotation.set(rnd() * 3, rnd() * 3, rnd() * 3);
     rock.scale.y = 0.55 + rnd() * 0.4;
     rock.castShadow = true;
@@ -279,11 +311,12 @@ export async function build_forest(cine) {
   }
   add_wildfire();
 
-  /* 取景：围住整片林子 */
-  if (forests.length) {
-    const all = forests.flat();
-    const xs = to_world(all).map((p) => p[0]);
-    const zs = to_world(all).map((p) => p[1]);
+  /* 取景：聚焦西侧主林带（火点与巡检设备都在这里），
+     东北与北侧的小片森林留给校园页签的全景看。 */
+  const main_poly = forests[0] || [];
+  if (main_poly.length) {
+    const xs = to_world(main_poly).map((p) => p[0]);
+    const zs = to_world(main_poly).map((p) => p[1]);
     root.userData.frame = {
       center: [(Math.min(...xs) + Math.max(...xs)) / 2, (Math.min(...zs) + Math.max(...zs)) / 2],
       span: Math.max(Math.max(...xs) - Math.min(...xs), Math.max(...zs) - Math.min(...zs)) + 40,
