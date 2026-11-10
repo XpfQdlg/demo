@@ -20,6 +20,10 @@
  * 最近的事件日志就能得到完整列表。后打开的手机、刷新过的页面、
  * 断线重连的手机，走的是同一条回放路径，不用另写一套恢复逻辑。
  *
+ * 部署时配 BUS_STATE_FILE，总线会把事件日志、值班员和本场战报落到
+ * 一个 JSON（compose 里挂在数据卷上），容器重启后接着上一场，不会
+ * 一开屏就是「等待第一条现场预警」。
+ *
  * 只在开发服与 preview 里生效；单文件离线包没有服务，手机页自动落到
  * 演示模式。手机与电脑必须在同一局域网，dev server 已绑 0.0.0.0。
  *
@@ -41,6 +45,8 @@
  */
 
 import os from "node:os";
+import fs from "node:fs";
+import path from "node:path";
 
 const API = "/api/alerts";
 const CMD_API = "/api/commands";
@@ -55,6 +61,16 @@ const PARTICIPANT_TTL = 15 * 60 * 1000;
 const FRAME_TTL = 12 * 1000;
 const KEEPALIVE_MS = 20000;
 const MAX_BODY = 512 * 1024;
+
+/* 刷新页面不该让事件流清空，容器重启也不该。
+   总线把「这一场」的状态落一个 JSON，进程起来时读回去。
+   开发服默认不写盘（免得在仓库里留垃圾），部署时用 BUS_STATE_FILE
+   指到 compose 挂的数据卷上。 */
+const STATE_FILE = (process.env.BUS_STATE_FILE || "").trim();
+const STATE_SAVE_DELAY = 300;
+const STATE_MAX_AGE = 8 * 60 * 60 * 1000;    // 只回放最近 8 小时
+const STALE_INCIDENT_MS = 10 * 60 * 1000;    // 没闭环又放了 10 分钟的事故，重启后直接作废
+
 
 const ROLES = new Set(["guard", "fire", "inspect", "visitor"]);
 const VOICE_ACTIONS = new Set(["scene", "follow", "overview", "report", "battle"]);
@@ -212,6 +228,100 @@ export function alert_bus_plugin() {
   };
   let latest_frame = null;
 
+  /* ── 落盘 / 恢复 ──────────────────────────────────────────────────
+     只有部署环境配了 BUS_STATE_FILE 才走这套，开发服行为不变。 */
+
+  let save_timer = 0;
+
+  /** 旧事故不带着走：超过 8 小时的事件不要；没闭环又放了 10 分钟的
+      事故链整条丢掉，否则刷新后手机端会挂着一张永远「前往中」的卡 */
+  function sanitize_events(list) {
+    const now = Date.now();
+    const kept = list.filter((ev) => ev && Number.isFinite(ev.ts) && now - ev.ts <= STATE_MAX_AGE);
+    const last = new Map();
+    for (const ev of kept) {
+      const id = ev.incident?.id;
+      if (id) last.set(id, ev);
+    }
+    const drop = new Set();
+    for (const [id, ev] of last) {
+      if (ev.type !== "resolved" && now - ev.ts > STALE_INCIDENT_MS) drop.add(id);
+    }
+    return kept.filter((ev) => !ev.incident?.id || !drop.has(ev.incident.id));
+  }
+
+  function load_state() {
+    if (!STATE_FILE) return;
+    let data = null;
+    try {
+      data = JSON.parse(fs.readFileSync(STATE_FILE, "utf8"));
+    } catch {
+      return;
+    }
+    if (!data || typeof data !== "object") return;
+
+    if (Array.isArray(data.events)) {
+      events.push(...sanitize_events(data.events).slice(-MAX_EVENTS));
+      last_ts = events.length ? events[events.length - 1].ts || 0 : 0;
+    }
+    if (Array.isArray(data.commands)) commands.push(...data.commands.slice(-MAX_COMMANDS));
+    if (Array.isArray(data.participants)) {
+      for (const p of data.participants) {
+        if (p && typeof p.client_id === "string") participants.set(p.client_id, p);
+      }
+    }
+    if (data.session && typeof data.session === "object") Object.assign(session, data.session);
+    command_seq = Array.isArray(data.commands) ? data.commands.length : 0;
+
+    if (events.length || participants.size) {
+      console.log(`  ➜  AlertBus: restored ${events.length} events / ${participants.size} participants`);
+    }
+  }
+
+  /** 原子写：先落 .tmp 再 rename，容器在写一半时被停也不会留半个文件 */
+  function persist_now() {
+    save_timer = 0;
+    if (!STATE_FILE) return;
+    const data = {
+      v: 1,
+      ts: Date.now(),
+      events: events.slice(-MAX_EVENTS),
+      commands: commands.slice(-MAX_COMMANDS),
+      participants: [...participants.values()],
+      session,
+    };
+    try {
+      fs.mkdirSync(path.dirname(STATE_FILE), { recursive: true });
+      const tmp = `${STATE_FILE}.tmp`;
+      fs.writeFileSync(tmp, JSON.stringify(data));
+      fs.renameSync(tmp, STATE_FILE);
+    } catch (err) {
+      console.warn("[alert-bus] persist failed:", err?.message || err);
+    }
+  }
+
+  /** 报警连着来时只写一次盘 */
+  function persist() {
+    if (!STATE_FILE || save_timer) return;
+    save_timer = setTimeout(persist_now, STATE_SAVE_DELAY);
+  }
+
+  load_state();
+  if (STATE_FILE) {
+    /* docker stop 发 SIGTERM：把还在防抖窗口里没落盘的那一次补上 */
+    const flush = () => {
+      if (save_timer) persist_now();
+    };
+    process.once("SIGTERM", () => {
+      flush();
+      process.exit(0);
+    });
+    process.once("SIGINT", () => {
+      flush();
+      process.exit(0);
+    });
+  }
+
   function snapshot() {
     return { v: 1, server_ts: Date.now(), events: events.slice() };
   }
@@ -265,6 +375,7 @@ export function alert_bus_plugin() {
     if (events.length > MAX_EVENTS) events.splice(0, events.length - MAX_EVENTS);
     last_ts = Date.now();
     broadcast(event);
+    persist();
   }
 
   function broadcast_command(command) {
@@ -476,6 +587,7 @@ export function alert_bus_plugin() {
       session.by_kind = {};
       session.started_ts = Date.now();
       clear_fallbacks();
+      persist_now();
       send(res, 200, { ok: true });
       return;
     }
@@ -567,6 +679,7 @@ export function alert_bus_plugin() {
       /* 语音指挥只转发给大屏执行，不生成预警生命周期 */
       if (command.type === "voice_command") {
         session.voice_commands += 1;
+        persist();
         if (listeners > 0) {
           broadcast_command(command);
           send(res, 200, { ok: true, id: command.id, mode: "big-screen", listeners });
@@ -579,6 +692,7 @@ export function alert_bus_plugin() {
       session.visitor_reports += 1;
       session.by_scene[command.scene] = (session.by_scene[command.scene] || 0) + 1;
       session.by_kind[command.kind] = (session.by_kind[command.kind] || 0) + 1;
+      persist();
 
       /* 有指挥大屏在看：把指令推给大屏，由 3D 场景真正出警；
          没有大屏：总线自己演一条生命周期，保证手机端闭环不落空 */
@@ -685,6 +799,7 @@ export function alert_bus_plugin() {
         last_seen: now,
       });
       prune_participants();
+      persist();
       send(res, 200, { ok: true, participant: participants.get(p.client_id), count: participants.size });
       return;
     }

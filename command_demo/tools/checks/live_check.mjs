@@ -5,8 +5,8 @@
  *   BASE=http://127.0.0.1:2026 node tools/checks/live_check.mjs
  *
  * 四件事：大屏能渲染（场景、设备数、四张模型卡）、手机页报错为零、
- * 手机点「演示上报」后大屏右下角回执出现、全程无 5xx / pageerror。
- * 任何一条不满足都以退出码 1 结束，方便部署脚本直接串起来。
+ * 手机点「演示上报」后大屏右下角回执出现、刷新大屏后事件流从总线回放，
+ * 全程无 5xx / pageerror。任何一条不满足都以退出码 1 结束，方便部署脚本直接串起来。
  */
 import puppeteer from "puppeteer-core";
 import fs from "node:fs";
@@ -62,6 +62,17 @@ const ping = await st.evaluate(() => ({
   verdict: document.querySelector("#visitorPingVerdict")?.textContent,
 }));
 console.log("ping", ping);
+
+/* 刷新一次：事件流应当从总线回放，而不是重新变空 */
+await st.reload({ waitUntil: "domcontentloaded", timeout: 60000 });
+await st.waitForFunction(() => document.querySelectorAll("#feedRows .feed-row").length > 0, { timeout: 60000 });
+await new Promise((r) => setTimeout(r, 800));
+const feed = await st.evaluate(() =>
+  [...document.querySelectorAll("#feedRows .feed-row")].map((r) => r.textContent.trim())
+);
+await st.screenshot({ path: "shots/live_restore.png" });
+console.log("feed after reload", feed.length, feed.slice(0, 2));
+
 console.log("errors", errs.slice(0, 3));
 await b.close();
 
@@ -69,6 +80,7 @@ const bad = [];
 if (screen.scene !== "campus") bad.push("大屏场景没起来");
 if (screen.cards !== 4) bad.push("模型卡数量不是 4");
 if (!String(ping.on || "").includes("on")) bad.push("回执卡没出现");
+if (feed.length < 2) bad.push("刷新后事件流没有回放");
 if (errs.length) bad.push(`有 ${errs.length} 条错误`);
 if (bad.length) {
   console.error("✗ " + bad.join("；"));

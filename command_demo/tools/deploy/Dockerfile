@@ -15,6 +15,10 @@ ENV NODE_ENV=production \
 COPY --chown=node:node server.mjs alert_bus.mjs ./
 COPY --chown=node:node site ./site
 
+# 总线状态落盘目录：compose 把命名卷挂在这里，镜像里先把属主给 node，
+# 否则 Docker 新建卷默认 root:root，非 root 进程写不进去
+RUN mkdir -p /data && chown node:node /data
+
 USER node
 EXPOSE 2026
 
