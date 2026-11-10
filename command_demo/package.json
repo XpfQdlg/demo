@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "bundle": "node tools/bundle.mjs --clean",
     "check": "node tools/checks/assert_cinematic.mjs",
-    "check:file": "node tools/checks/file_check.mjs"
+    "check:file": "node tools/checks/file_check.mjs",
+    "check:live": "node tools/checks/live_check.mjs"
   },
   "dependencies": {
     "qrcode-generator": "^1.4.4",
