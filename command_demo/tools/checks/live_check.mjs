@@ -63,9 +63,14 @@ const ping = await st.evaluate(() => ({
 }));
 console.log("ping", ping);
 
-/* 刷新一次：事件流应当从总线回放，而不是重新变空 */
+/* 刷新一次：事件流应当从总线回放，而不是重新变空。
+   注意手机页开着时大屏页是后台标签，rAF 会被节流，polling 不能留在默认的 "raf"。 */
+await st.bringToFront();
 await st.reload({ waitUntil: "domcontentloaded", timeout: 60000 });
-await st.waitForFunction(() => document.querySelectorAll("#feedRows .feed-row").length > 0, { timeout: 60000 });
+await st.waitForFunction(() => document.querySelectorAll("#feedRows .feed-row").length > 0, {
+  polling: 1000,
+  timeout: 60000,
+});
 await new Promise((r) => setTimeout(r, 800));
 const feed = await st.evaluate(() =>
   [...document.querySelectorAll("#feedRows .feed-row")].map((r) => r.textContent.trim())
