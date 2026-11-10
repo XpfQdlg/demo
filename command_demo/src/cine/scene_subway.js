@@ -7,7 +7,7 @@ import PACKAGE from "../map/data/map_package.json" with { type: "json" };
 /* ══════════════════════════════════════════════════════════════════════════
    scene_subway — 地铁站（观感版）
 
-   站厅尺度来自 map_package 的棕色地块（约 185 × 47 米），
+   站厅尺度直接量自 map_package 的地铁地块（约 371 × 94 米），
    内部构造按真实岛式站台做：
      中间岛式站台抬高 0.9 米，两侧各一条 4.4 米轨行区，
      站台边缘黄色安全线 + 盲道，两端停止线，
@@ -231,8 +231,9 @@ export async function build_subway(cine) {
   });
 
   /* 站厅是封闭空间，补一盏半球光当环境光，
-     否则背光面全黑、顶棚一片死灰 */
-  const fill = new THREE.HemisphereLight(0xe8f2fb, 0x6a7078, 1.1);
+     否则背光面全黑、顶棚一片死灰。
+     强度别给高：浅色混凝土过曝后整屏发白，纵深全靠明暗层次撑。 */
+  const fill = new THREE.HemisphereLight(0xe8f2fb, 0x6a7078, 0.72);
   fill.position.set(cx, H_HALL, cz);
   root.add(fill);
 
@@ -290,9 +291,10 @@ export async function build_subway(cine) {
   });
 
   /* 封闭盒子：轨道相机不加约束会退到厅外，看到盒子外面的天空与地块边缘。
-     夹在厅内并留 4 米余量，贴太近时近裁剪面会把墙面切掉半块。 */
+     夹在厅内并留 4 米余量，贴太近时近裁剪面会把墙面切掉半块。
+     机位中心往站台一侧偏 3.2 米：立柱在 cz 一线上，正对机位时正好堵住灭点。 */
   root.userData.frame = {
-    center: [cx, cz],
+    center: [cx, cz + 3.2],
     y: 2.6,
     span: 210,
     cam_clamp: {

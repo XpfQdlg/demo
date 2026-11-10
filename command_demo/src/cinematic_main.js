@@ -729,11 +729,13 @@ let monitor = null;        // 监控与报警调度，切场景时重建
 /** 每个场景的底色：室内收紧雾、压低天光，室外留出远景层次 */
 function apply_night_view(name) {
   if (LOOK === "maquette") {
-    /* 站厅是室内：把太阳关掉、压低环境光，靠它自己的灯 */
+    /* 站厅是室内：把太阳关掉、压低环境光，靠它自己的灯。
+       浅色混凝土在 0.82 曝光下会白成一片，压到 0.66 才有明暗层次；
+       顶棚灯带与站台黄线因此才立得住。 */
     const indoor = name === "subway";
-    cine.sun.intensity = indoor ? 0.7 : 3.2;
-    cine.hemi.intensity = indoor ? 0.7 : 1.0;
-    cine.renderer.toneMappingExposure = indoor ? 0.82 : 1.02;
+    cine.sun.intensity = indoor ? 0.45 : 3.2;
+    cine.hemi.intensity = indoor ? 0.55 : 1.0;
+    cine.renderer.toneMappingExposure = indoor ? 0.66 : 1.02;
     return;
   }
   const L = LOOKS[LOOK] || LOOKS.dusk;
@@ -799,6 +801,9 @@ async function show(name) {
   /* 切场景先清掉上一场景注册的动画（列车等）与 kit 的 ticker（火焰、行人） */
   cine.clear_updaters();
   clearTicks();
+  /* 沙盘皮肤不贴图：关掉预载，省掉 5 MB 图解码。
+     地铁保留 PBR，必须重新打开（并清掉无图材质缓存）。 */
+  PBR.set_textures_enabled(!(LOOK === "maquette" && name !== "subway"));
   const root = await BUILDERS[name](cine);
 
   /* 合并在挂进场景之前做：此时所有网格的父节点都还是场景自己的组，

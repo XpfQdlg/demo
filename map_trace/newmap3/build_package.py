@@ -17,8 +17,9 @@
     preview_classes.png 分类核对图
     preview_package.png 数据包核对图：建筑、道路、掩膜叠在一起
 
-比例尺：MPP 实际取 1.0 米/像素。旧文档与输出里 note 字段仍写 0.5，两处口径不一致，
-待拿到实测尺寸后统一（见 docs/06_3D技术架构.md 待优化项）。
+比例尺：MPP 取 1.0 米/像素。图幅 1333×1079 像素约合 1.33×1.08 公里，
+8 米宽道路在图上是 8 像素，35×20 像素的运动场地约合 35×20 米，口径自洽。
+0.5 是上一版图的手工估算值，已废弃；不要再改回 0.5。
 
 用法：
     python build_package.py
@@ -36,7 +37,7 @@ SRC = os.path.join(BASE, "..", "..", "source", "maps", "campus_zoning_1333x1079.
 OUT_JSON = os.path.join(BASE, "map_package.json")
 OUT_GROUND = os.path.join(BASE, "ground.png")
 
-MPP = 1.0          # 米/像素；与 note 字段里的 0.5 不一致，待确认后统一
+MPP = 1.0          # 米/像素；旧图估算的 0.5 已废弃，见文件头
 CELL_PX = 2        # 行走掩膜一格 2 像素 = 2 米
 ROAD_W_M = 8.0     # 道路宽度，米
 
@@ -382,7 +383,9 @@ def main():
         "image": {"width": w, "height": h,
                   "source": os.path.basename(SRC)},
         "scale": {"meters_per_px": MPP,
-                  "note": "比例尺沿用手工估算的 0.5 米/像素，拿到实测尺寸后改这一处"},
+                  "note": "1.0 米/像素：图幅 1333×1079 像素约合 1.33×1.08 公里，"
+                          "8 米道路在图上是 8 像素、35×20 像素的运动场地约合 35×20 米，"
+                          "口径自洽。0.5 是旧图的手工估算值，已废弃"},
         "zones": {
             "campus": {"polygon": campus_poly,
                        "bbox": [float(np.where(campus_mask)[1].min()), float(np.where(campus_mask)[0].min()),

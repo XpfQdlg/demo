@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { pbr } from "../core/pbr.js";
+import { merge_static } from "../core/merge_static.js";
 
 /* ══════════════════════════════════════════════════════════════════════════
    building — 观感版的建筑构件
@@ -27,6 +28,22 @@ function contact_shadow_material() {
     opacity: 0.9, toneMapped: false,
   });
   return _blob_mat;
+}
+
+/* 勒脚与压顶按「外墙材质 + 用途」缓存。
+   早先是每栋楼 clone 一份，一栋一个材质；merge_static 按材质分组，
+   于是每栋楼都单独成为一次绘制——校园 210 段楼体就是 210 次。
+   颜色是常量，纹理跟外墙走，同一种外墙共用一份就够。 */
+const trim_cache = new Map();
+function trim_material(wall_mat, role, color) {
+  const key = `${role}:${wall_mat.uuid}`;
+  let m = trim_cache.get(key);
+  if (!m) {
+    m = wall_mat.clone();
+    m.color = new THREE.Color(color);
+    trim_cache.set(key, m);
+  }
+  return m;
 }
 
 const FLOOR_H = 3.6;
@@ -243,13 +260,11 @@ export function make_building({
   blob.rotation.x = -Math.PI / 2;
   blob.position.set(cx, 0.02, cz);
   blob.renderOrder = 1;
-  blob.userData.no_merge = true;
   g.add(blob);
 
   /* 勒脚：底部 0.9 米略粗、颜色更深，建筑才「长在地上」 */
   if (plinth) {
-    const pm = wall_mat.clone();
-    pm.color = new THREE.Color(0x9a978f);
+    const pm = trim_material(wall_mat, "plinth", 0x9a978f);
     const pg = new THREE.ExtrudeGeometry(shape, {
       depth: 0.9,
       bevelEnabled: true,
@@ -263,8 +278,7 @@ export function make_building({
 
   /* 女儿墙 + 压顶 */
   if (parapet) {
-    const cap_mat = wall_mat.clone();
-    cap_mat.color = new THREE.Color(0xe8e3d8);
+    const cap_mat = trim_material(wall_mat, "cap", 0xe8e3d8);
     for (let i = 0; i < pts.length; i++) {
       const a = pts[i];
       const b = pts[(i + 1) % pts.length];
@@ -479,6 +493,12 @@ export function add_distant_town(parent, {
     pts.userData.no_merge = true;
     parent.add(pts);
   }
+
+  /* 远景楼本身是静态的，但整组要留着「夜里可整组隐藏」的语义，
+     所以只在自己组内合并：44 次绘制压到 3 次，组名与开关都不受影响。 */
+  town.userData.no_merge = false;
+  merge_static(town);
+  town.userData.no_merge = true;
 }
 
 /** 折线加宽成路面多边形（像素坐标进，像素坐标出） */

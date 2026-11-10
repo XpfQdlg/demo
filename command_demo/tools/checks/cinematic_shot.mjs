@@ -3,6 +3,7 @@
  *
  *   node tools/checks/cinematic_shot.mjs                    两个场景各一张
  *   node tools/checks/cinematic_shot.mjs --scene=community  只拍小区
+ *   node tools/checks/cinematic_shot.mjs --scene=campus --look=night  拍夜景皮肤
  *
  * 注意：材质要先预载完才建场景，一共四百多张贴图，
  * 无头环境下要等 20 秒以上。等的时间短了会拍到空场景。
@@ -28,6 +29,8 @@ if (!EDGE) {
 
 const scenes = args.scene ? [args.scene] : ["plaza", "community"];
 const wait = Number(args.wait || 26000);
+const look = args.look ? `&look=${args.look}` : "";
+const suffix = args.look ? `_${args.look}` : "";
 
 const browser = await puppeteer.launch({
   executablePath: EDGE,
@@ -43,13 +46,13 @@ for (const sc of scenes) {
   page.on("pageerror", (e) => errs.push("pageerror: " + e.message));
   page.on("console", (m) => m.type() === "error" && errs.push("console: " + m.text().slice(0, 160)));
 
-  await page.goto(`http://localhost:5179/cinematic.html?scene=${sc}`, {
+  await page.goto(`http://localhost:5179/cinematic.html?scene=${sc}${look}`, {
     waitUntil: "domcontentloaded",
     timeout: 60000,
   });
   await new Promise((r) => setTimeout(r, wait));
 
-  const out = `shots/final_${sc}.png`;
+  const out = `shots/final_${sc}${suffix}.png`;
   await page.screenshot({ path: out });
   console.log("SHOT:", out);
   if (errs.length) console.log("LOGS:\n" + errs.slice(0, 4).join("\n"));

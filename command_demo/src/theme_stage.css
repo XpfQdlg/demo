@@ -443,14 +443,20 @@ body.maq #stage::before {
 }
 
 .dk-foot {
-  margin-top: 14px;
-  display: flex;
+  margin-top: 12px;
+  display: inline-flex;
   align-items: center;
   gap: 14px;
-  padding: 0 2px;
+  padding: 7px 11px;
+  border-radius: 9px;
+  /* 浅色场景（maquette 是米白底）里裸文字会糊成一片，
+     给个小底片当「状态条」，深色场景也仍然成立 */
+  background: rgba(8, 12, 16, 0.52);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   font-size: 10px;
   letter-spacing: 0.1em;
-  color: var(--ink-3);
+  color: rgba(196, 214, 232, 0.62);
 }
 
 .dk-foot b {
@@ -1313,10 +1319,12 @@ body.map #stage::before, body.map #stage::after { display: none; }
 }
 .vp-title {
   margin-top: 9px;
+  /* 模型名是「这张回执属于哪个模型」，比标题低一级；
+     竖排后不再和标题抢同一行，读起来像「校园巡检模型 / 校园 · 明火」 */
   display: flex;
-  align-items: baseline;
-  gap: 8px;
-  flex-wrap: wrap;
+  flex-direction: column-reverse;
+  align-items: flex-start;
+  gap: 3px;
 }
 .vp-title b {
   font-size: 18px;
@@ -1325,7 +1333,8 @@ body.map #stage::before, body.map #stage::after { display: none; }
   color: #f2f7f8;
 }
 .vp-title span {
-  font-size: 10.5px;
+  font-size: 10px;
+  letter-spacing: 0.08em;
   color: rgba(190, 210, 218, 0.55);
 }
 .vp-verdict {

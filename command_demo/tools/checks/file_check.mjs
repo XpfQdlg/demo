@@ -6,7 +6,8 @@
  *
  * 除了「能打开」，还要确认贴图真的从 data URI 里解出来了。
  * file:// 下直接读本地图片会触发跨源限制，纹理上传失败时画面是纯色，
- * 但控制台不一定会报错，所以要看 __pbr.peek("asphalt/color")。
+ * 但控制台不一定会报错，所以主动开一次贴图预载再看 __pbr.peek("asphalt/color")。
+ * 默认沙盘皮肤会跳过预载，这里显式打开，验的是内联表本身。
  */
 import puppeteer from "puppeteer-core";
 import fs from "node:fs";
@@ -44,14 +45,26 @@ await page.goto(url, { waitUntil: "load", timeout: 60000 });
 await page.waitForFunction("window.__cine && window.__pbr", { timeout: 60000 });
 await new Promise((r) => setTimeout(r, 12000));
 
-const st = await page.evaluate(() => ({
-  canvas: !!document.querySelector("canvas"),
-  inline_assets: Object.keys(window.__INLINE_ASSETS || {}).length,
-  asphalt: window.__pbr?.peek("asphalt/color"),
-  agents: document.querySelectorAll("#agentRows .agent-row").length,
-  fps: document.getElementById("fps")?.textContent || "—",
-}));
+const st = await page.evaluate(async () => {
+  const p = window.__pbr;
+  /* 沙盘皮肤默认不载图，这里显式开一次，证明内联 data URI 能解成纹理 */
+  p.set_textures_enabled(true);
+  await p.preload(["asphalt"]);
+  return {
+    canvas: !!document.querySelector("canvas"),
+    inline_assets: Object.keys(window.__INLINE_ASSETS || {}).length,
+    asphalt: p.peek("asphalt/color"),
+    agents: document.querySelectorAll("#agentRows .agent-row").length,
+    fps: document.getElementById("fps")?.textContent || "—",
+  };
+});
 console.log("首屏:", JSON.stringify(st));
+if (st.asphalt !== "texture") {
+  /* 这一条是单文件的命门：贴图没解出来就等于交了个灰模 */
+  console.error("✗ 贴图没从内联表解出来（asphalt/color =", st.asphalt, "）");
+  await browser.close();
+  process.exit(1);
+}
 
 for (const sc of ["campus", "community", "forest", "subway"]) {
   await page.click(`[data-scene="${sc}"]`);

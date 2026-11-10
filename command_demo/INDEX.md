@@ -220,7 +220,7 @@ node tools/checks/_mobile_probe.mjs
 
 ## 五、关键约定
 
-**坐标**：数据层与接口层一律像素坐标，只在 `map/coords.js` 转世界坐标。比例尺取自 `map_package.json`（当前 `meters_per_px` 为 1.0；旧文档与 note 字段写 0.5，口径待实测校正），地图换版只换数据包。
+**坐标**：数据层与接口层一律像素坐标，只在 `map/coords.js` 转世界坐标。比例尺取自 `map_package.json`（`meters_per_px` 为 1.0，口径见数据包 `scale.note`；旧文档的 0.5 已废弃），地图换版只换数据包。
 
 **寻路**：所有场景统一走 A*，网格来自 `nav_grid.js`，每个场景有两套：
 `all`（机器狗，建筑与轨道之外都行）与 `road`（人形机器人，只走道路 / 站台面）。

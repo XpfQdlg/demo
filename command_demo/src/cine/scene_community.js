@@ -48,7 +48,8 @@ function make_wall(root, poly_px, { h = 1.9, thick = 0.36, step = 4 } = {}) {
 
   const g = new THREE.Group();
   g.name = "community_wall";
-  g.userData.no_merge = true;
+  /* 墙是静态的：早先标了 no_merge，564 段墙就是 564 次绘制。
+     交给 merge_static 按材质合成两块，组名保留。 */
 
   let built = 0;
   let gaps = 0;
