@@ -686,6 +686,8 @@ function make_monitor(tab, root, list) {
     make_prop: make_scene_prop,
     /* 异常名按场景本地化，与手机端模型口径共用 SCENE_MODELS */
     kind_names: scene_model_of(tab).alert_names,
+    /* 本场景轮流报哪些类型：只报「手里有实拍照片」的那几类，图卡才不会张冠李戴 */
+    kinds: scene_model_of(tab).alert_kinds,
     hooks: {
       on_alarm: on_camera_alarm,
       on_dispatched,
@@ -695,7 +697,8 @@ function make_monitor(tab, root, list) {
       on_manual_arrive,
     },
   });
-  m.build({ count: 3, ...(MONITOR_AREA[tab] || {}) });
+  /* 5 个点位 / 5 起异常：比原来 3 起更密，讲解一轮不用等太久 */
+  m.build({ count: 5, ...(MONITOR_AREA[tab] || {}) });
   window.__monitor = m;   // 调试用：验收脚本要读摄像头点位与报警状态
   /* 通知手机页换场景：旧场景里没闭环的预警，手机端会收尾掉 */
   publish_scene(tab);

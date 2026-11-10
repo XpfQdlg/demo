@@ -47,7 +47,9 @@ export function make_evidence(parent, { floor_y = () => 0 } = {}) {
 
   function show({ scene, px, area, name, kind, camera }) {
     if (!px) return null;
-    const photo = evidence_for(scene, kind);
+    /* 同类型多张图时按事发点稳定挑选：同一起报警刷新后还是同一张，
+       同一场景不同类型不会互相串图 */
+    const photo = evidence_for(scene, kind, `${px[0]},${px[1]}|${area}|${name}`);
     if (!photo) return null;
 
     /* 同一点连续报警不叠第二张，把旧卡换掉 */
@@ -69,6 +71,7 @@ export function make_evidence(parent, { floor_y = () => 0 } = {}) {
         <div class="evi-shot"><img alt="现场抓拍" draggable="false"></div>
         <div class="evi-meta"><b></b><span></span></div>
       </div>
+      <span class="evi-arm"></span>
       <span class="evi-line"></span>
       <span class="evi-pin"></span>`;
 
@@ -101,14 +104,19 @@ export function make_evidence(parent, { floor_y = () => 0 } = {}) {
       if (box.top < 190) el.classList.add("is-flip");
 
       /* 左右两侧是模型卡与事件流面板，卡片压上去就看不清了：
-         量完把卡片推回安全带，引线仍落在事发点（卡片够宽，偏一点也接得上）。 */
+         量完把卡片推回安全带，再用一段横臂把卡片底边接回事发点，
+         否则卡片被推开后引线悬在半空、看不出指向哪里。 */
       const vw = document.documentElement.clientWidth;
       const safe_l = 404;
       const safe_r = vw - 396;
       let dx = 0;
       if (box.right > safe_r) dx = safe_r - box.right;
       else if (box.left < safe_l) dx = safe_l - box.left;
-      if (dx) card_el.style.setProperty("--evi-dx", `${Math.round(dx)}px`);
+      if (dx) {
+        card_el.style.setProperty("--evi-dx", `${Math.round(dx)}px`);
+        el.style.setProperty("--evi-arm-x", `${Math.round(Math.min(0, dx))}px`);
+        el.style.setProperty("--evi-arm-w", `${Math.round(Math.abs(dx))}px`);
+      }
     });
 
     card.timer = setTimeout(() => drop(card), HOLD_MS);

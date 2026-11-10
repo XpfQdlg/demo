@@ -1,23 +1,22 @@
 {
   "campus": [
-    { "file": "campus-road-1.jpg", "caption": "一号教学楼东侧", "kind": "fire" },
-    { "file": "campus-road-3.jpg", "caption": "图书馆南广场", "kind": "crowd" },
-    { "file": "campus-road-4.jpg", "caption": "田径场北侧通道", "kind": "trash" },
-    { "file": "campus-road-2.jpg", "caption": "东门主路", "kind": "trash" }
+    { "file": "forest-smoke-1.jpg", "caption": "教学楼后绿化带", "kind": "fire" },
+    { "file": "forest-smoke-2.jpg", "caption": "一号教学楼东侧", "kind": "smoke" },
+    { "file": "campus-road-3.jpg", "caption": "图书馆南广场", "kind": "crowd" }
   ],
   "community": [
-    { "file": "community-corridor-1.jpg", "caption": "6 号楼一层", "kind": "fire" },
     { "file": "community-corridor-2.jpg", "caption": "3 号楼安全出口", "kind": "crowd" },
+    { "file": "community-ext-1.jpg", "caption": "6 号楼一层", "kind": "ext" },
     { "file": "community-corridor-3.jpg", "caption": "2 号楼垃圾点", "kind": "trash" }
   ],
   "subway": [
-    { "file": "subway-corridor-1.jpg", "caption": "站厅西侧通道", "kind": "fire" },
-    { "file": "subway-platform-2.jpg", "caption": "站台 2 号口", "kind": "crowd" },
-    { "file": "subway-platform-1.jpg", "caption": "站台候车区", "kind": "trash" }
+    { "file": "subway-platform-1.jpg", "caption": "站台候车区", "kind": "crowd" },
+    { "file": "subway-ext-1.jpg", "caption": "站厅西侧通道", "kind": "ext" },
+    { "file": "subway-corridor-1.jpg", "caption": "站台 2 号口", "kind": "exit" }
   ],
   "forest": [
-    { "file": "forest-smoke-1.jpg", "caption": "西山林区北侧", "kind": "fire" },
-    { "file": "forest-smoke-2.jpg", "caption": "东侧林道", "kind": "crowd" },
-    { "file": "forest-smoke-3.jpg", "caption": "巡护道交叉口", "kind": "trash" }
+    { "file": "forest-fire-1.jpg", "caption": "西山林区北侧", "kind": "fire" },
+    { "file": "forest-smoke-2.jpg", "caption": "东侧林道", "kind": "smoke" },
+    { "file": "forest-smoke-1.jpg", "caption": "巡护道交叉口", "kind": "crowd" }
   ]
 }

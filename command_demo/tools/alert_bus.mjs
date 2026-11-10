@@ -77,9 +77,17 @@ const VOICE_ACTIONS = new Set(["scene", "follow", "overview", "report", "battle"
 
 const EVENT_TYPES = new Set(["scene", "alarm", "dispatched", "arrive", "handling", "resolved"]);
 const SCENES = new Set(["campus", "community", "subway", "forest"]);
-const KINDS = new Set(["fire", "crowd", "trash"]);
-const KIND_LEVEL = { fire: 3, crowd: 2, trash: 1 };
-const KIND_NAME = { fire: "明火", crowd: "人员聚集", trash: "垃圾堆积" };
+const KINDS = new Set(["fire", "crowd", "trash", "smoke", "hydrant", "ext", "exit"]);
+const KIND_LEVEL = { fire: 3, crowd: 2, trash: 1, smoke: 2, hydrant: 2, ext: 2, exit: 2 };
+const KIND_NAME = {
+  fire: "明火",
+  crowd: "人员聚集",
+  trash: "垃圾堆积",
+  smoke: "违规吸烟",
+  hydrant: "消防栓异常",
+  ext: "灭火器异常",
+  exit: "疏散通道堵塞",
+};
 const SCENE_LABEL = { campus: "校园", community: "小区", subway: "地铁", forest: "森林" };
 
 /* 太宽松会把垃圾数据灌进日志，太严格以后加字段就要改服务端。

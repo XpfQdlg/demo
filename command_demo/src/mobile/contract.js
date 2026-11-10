@@ -52,9 +52,19 @@ export const SCENE_MODELS = {
     accent: "#43e0ff",
     coverage: "覆盖校园 30 项视觉识别任务",
     capabilities: ["消防与人员聚集", "实验室安全（泄漏 / 仪表 / 开关）", "道路与设施异常（积水 / 障碍 / 井盖）"],
-    demo_alerts: ["明火", "人员聚集", "垃圾堆积"],
-    /* 同一套 fire/crowd/trash 图标，按场景换成讲得通的异常名 */
-    alert_names: { fire: "明火", crowd: "人员聚集", trash: "垃圾堆积" },
+    demo_alerts: ["明火隐患", "违规吸烟", "消防栓异常", "疏散通道堵塞"],
+    /* 同一套事件模型，按场景换成讲得通的异常名；
+       alert_kinds 是本场景自动报警会轮到的类型，也是图卡能出真照片的类型 */
+    alert_kinds: ["fire", "smoke", "crowd", "hydrant", "exit"],
+    alert_names: {
+      fire: "明火隐患",
+      smoke: "违规吸烟",
+      crowd: "人员聚集",
+      trash: "垃圾堆积",
+      hydrant: "消防栓异常",
+      ext: "灭火器异常",
+      exit: "疏散通道堵塞",
+    },
   },
   community: {
     id: "community",
@@ -66,8 +76,17 @@ export const SCENE_MODELS = {
     accent: "#ffb454",
     coverage: "覆盖小区 11 组 21 项识别任务",
     capabilities: ["出入口拥挤与人员聚集", "电动车入楼 / 楼道堆物", "消防通道与积水隐患"],
-    demo_alerts: ["烟雾火灾", "出入口拥挤", "垃圾满溢"],
-    alert_names: { fire: "烟雾火灾", crowd: "出入口拥挤", trash: "垃圾满溢" },
+    demo_alerts: ["出入口拥挤", "灭火器缺失", "安全出口堵塞", "消防栓被埋压"],
+    alert_kinds: ["crowd", "ext", "exit", "trash", "hydrant"],
+    alert_names: {
+      fire: "烟雾火灾",
+      smoke: "楼道吸烟",
+      crowd: "出入口拥挤",
+      trash: "垃圾满溢",
+      hydrant: "消防栓被埋压",
+      ext: "灭火器缺失",
+      exit: "安全出口堵塞",
+    },
   },
   subway: {
     id: "subway",
@@ -79,8 +98,17 @@ export const SCENE_MODELS = {
     accent: "#a78bfa",
     coverage: "覆盖地铁 16 组 32 项识别任务",
     capabilities: ["通道占用与遗留物品", "人员密度与异常行为", "积水渗漏与设施状态"],
-    demo_alerts: ["明火烟雾", "人员密度异常", "通道遗留物"],
-    alert_names: { fire: "明火烟雾", crowd: "人员密度异常", trash: "通道遗留物" },
+    demo_alerts: ["人员密度异常", "灭火器异常", "安全出口堵塞"],
+    alert_kinds: ["crowd", "ext", "exit"],
+    alert_names: {
+      fire: "明火烟雾",
+      smoke: "站台吸烟",
+      crowd: "人员密度异常",
+      trash: "通道遗留物",
+      hydrant: "消防栓异常",
+      ext: "灭火器异常",
+      exit: "安全出口堵塞",
+    },
   },
   forest: {
     id: "forest",
@@ -92,8 +120,17 @@ export const SCENE_MODELS = {
     accent: "#43e0a0",
     coverage: "覆盖森林 7 项火险与林业识别任务",
     capabilities: ["明火 / 烟雾 / 微烟雾", "林木病虫害与倒木断枝", "林道障碍与林区垃圾"],
-    demo_alerts: ["火险烟雾", "人员活动异常", "林区垃圾"],
-    alert_names: { fire: "火险烟雾", crowd: "人员活动异常", trash: "林区垃圾" },
+    demo_alerts: ["火险烟雾", "林区吸烟", "人员活动异常", "消防栓异常"],
+    alert_kinds: ["fire", "smoke", "crowd", "hydrant"],
+    alert_names: {
+      fire: "火险烟雾",
+      smoke: "林区吸烟",
+      crowd: "人员活动异常",
+      trash: "林区垃圾",
+      hydrant: "消防栓异常",
+      ext: "灭火器异常",
+      exit: "疏散通道堵塞",
+    },
   },
 };
 
@@ -148,6 +185,53 @@ export const KIND_META = {
     soft: "rgba(255, 209, 102, .1)",
     icon: "trash",
     hint: "堆积物需要清运",
+  },
+  /* 下面几类是「有实拍照片、就一定有对应事件」的扩展情景：
+     照片拍的是吸烟、消防栓、灭火器、安全出口，事件就按这些讲，
+     不再让垃圾或人群去套消防设施的照片。 */
+  smoke: {
+    kind: "smoke",
+    name: "违规吸烟",
+    level: 2,
+    level_label: "中危",
+    color: "#ff8a5c",
+    glow: "rgba(255, 138, 92, .4)",
+    soft: "rgba(255, 138, 92, .12)",
+    icon: "fire",
+    hint: "林带 / 楼道内吸烟，存在火源隐患",
+  },
+  hydrant: {
+    kind: "hydrant",
+    name: "消防栓异常",
+    level: 2,
+    level_label: "中危",
+    color: "#ff6f5e",
+    glow: "rgba(255, 111, 94, .4)",
+    soft: "rgba(255, 111, 94, .12)",
+    icon: "shield",
+    hint: "消防栓被埋压、遮挡或锈蚀",
+  },
+  ext: {
+    kind: "ext",
+    name: "灭火器异常",
+    level: 2,
+    level_label: "中危",
+    color: "#e2554a",
+    glow: "rgba(226, 85, 74, .4)",
+    soft: "rgba(226, 85, 74, .12)",
+    icon: "shield",
+    hint: "灭火器缺失、过期或被遮挡",
+  },
+  exit: {
+    kind: "exit",
+    name: "疏散通道堵塞",
+    level: 2,
+    level_label: "中危",
+    color: "#ffc35c",
+    glow: "rgba(255, 195, 92, .4)",
+    soft: "rgba(255, 195, 92, .12)",
+    icon: "arrow",
+    hint: "安全出口前堆放杂物，通道变窄",
   },
 };
 
@@ -285,6 +369,26 @@ const ANALYSIS_DEFAULT = {
     rationale: (area, name) =>
       `${area}检测到${name}，面积超限且持续存在，属于环境卫生事件，建议尽快清运。`,
     suggestion: "调度巡检执行体清运或复位现场，记录点位后安排复核。",
+  },
+  smoke: {
+    rationale: (area, name) =>
+      `${area}画面中人员手持火源并伴随烟雾，周边为可燃植被，判定为${name}引发的火险隐患。`,
+    suggestion: "就近调度执行体到场劝阻并检查周边，确认无明火残留后记录。",
+  },
+  hydrant: {
+    rationale: (area, name) =>
+      `${area}${name}：栓体被植被与堆物遮挡，取水口无法快速开启，影响应急取水。`,
+    suggestion: "调度执行体到场清理遮挡物，核查阀门与压力，恢复取水口净空。",
+  },
+  ext: {
+    rationale: (area, name) =>
+      `${area}${name}：灭火器箱体破损 / 压力表指针异常，现场无法确认器材可用。`,
+    suggestion: "通知消防维保补充或更换器材，复位后拍照回传复核。",
+  },
+  exit: {
+    rationale: (area, name) =>
+      `${area}${name}：安全出口前被杂物占用，疏散宽度不足，夜间标识可见性下降。`,
+    suggestion: "调度执行体清走占道物，复核出口开启方向与指示标识。",
   },
 };
 
@@ -472,3 +576,4 @@ export function format_distance(meters) {
   if (meters >= 1000) return `${(meters / 1000).toFixed(1)} 公里`;
   return `${Math.max(0, Math.round(meters))} 米`;
 }
+

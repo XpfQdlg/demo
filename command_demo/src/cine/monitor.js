@@ -26,7 +26,15 @@ import { spread_spots } from "../map/pathfind.js";
    ══════════════════════════════════════════════════════════════════════════ */
 
 const KINDS = ["fire", "trash", "crowd"];
-const KIND_NAME = { fire: "明火", trash: "垃圾堆积", crowd: "人员聚集" };
+const KIND_NAME = {
+  fire: "明火",
+  trash: "垃圾堆积",
+  crowd: "人员聚集",
+  smoke: "违规吸烟",
+  hydrant: "消防栓异常",
+  ext: "灭火器异常",
+  exit: "疏散通道堵塞",
+};
 const SCENE_NAME = { campus: "校园", community: "小区", forest: "西山林区", subway: "地铁站厅" };
 
 const FIRST_ALARM = 9;    // 场景加载后首起报警，留出镜头安顿的时间
@@ -182,15 +190,18 @@ export class Monitor {
    * @param make_prop  (kind, px, seed) => Object3D，由 life.js 提供
    * @param kind_names 可选，异常类型在各场景的叫法（森林的 fire 叫「火险烟雾」等），
    *                   不给就用通用名。四个场景模型的口径在 mobile/contract.js
+   * @param kinds      可选，本场景轮流报警的类型，默认 fire/trash/crowd；
+   *                   各场景只给「有实拍照片能对上」的类型（见 SCENE_MODELS.alert_kinds）
    * @param hooks      回调：on_alarm / on_dispatched / on_arrive / on_handling / on_resolve
    */
-  constructor({ root, scene, agents, floor_y = 0, make_prop, kind_names = null, hooks = {} }) {
+  constructor({ root, scene, agents, floor_y = 0, make_prop, kind_names = null, kinds = null, hooks = {} }) {
     this.root = root;
     this.scene = scene;
     this.agents = agents || [];
     this.floor_y = floor_y;
     this.make_prop = make_prop;
     this.kind_names = kind_names;
+    this.kinds = Array.isArray(kinds) && kinds.length ? kinds : KINDS;
     this.hooks = hooks;
 
     this.cameras = [];
@@ -307,7 +318,7 @@ export class Monitor {
       const cam_px = spots[i];
       const inc_px = this._near(nav_all, cam_px, 16 + (i % 3) * 6);
       const cam = this._add_camera(cam_px, inc_px, i, pole_h);
-      this._add_incident(KINDS[i % KINDS.length], inc_px, cam, i);
+      this._add_incident(this.kinds[i % this.kinds.length], inc_px, cam, i);
     }
   }
 
@@ -554,7 +565,7 @@ export class Monitor {
    */
   trigger_visitor_report({ kind = "fire", command_id = null } = {}) {
     if (!this.cameras.length) return null;
-    const safe_kind = KINDS.includes(kind) ? kind : "fire";
+    const safe_kind = this.kinds.includes(kind) ? kind : this.kinds[0];
 
     const nav = nav_for(this.scene, "all");
     /* 展台上观众上报后，机器狗最好十几二十米就赶到，不能派到场地另一头

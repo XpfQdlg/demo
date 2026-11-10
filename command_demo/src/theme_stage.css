@@ -1462,6 +1462,20 @@ body.map #stage::before, body.map #stage::after { display: none; }
   background: linear-gradient(to top, transparent, var(--evi-c));
   opacity: 0.85;
 }
+/* 卡片被推离事发点时，用一段横臂把它接回引线，指向才成立 */
+.evi-arm {
+  position: absolute;
+  left: var(--evi-arm-x, 0px);
+  bottom: 66px;
+  width: var(--evi-arm-w, 0px);
+  height: 1px;
+  background: linear-gradient(to right, var(--evi-c), transparent);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+.evi.is-in .evi-arm {
+  opacity: 0.55;
+}
 .evi-pin {
   position: absolute;
   left: -3.5px;
@@ -1488,6 +1502,10 @@ body.map #stage::before, body.map #stage::after { display: none; }
   top: 4px;
   height: 66px;
   background: linear-gradient(to bottom, var(--evi-c), transparent 88%);
+}
+.evi.is-flip .evi-arm {
+  bottom: auto;
+  top: 70px;
 }
 .evi-pin::after {
   content: "";

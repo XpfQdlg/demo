@@ -71,21 +71,152 @@ function make_fire() {
   return g;
 }
 
+/** 违规吸烟：只有一小股烟、没有火，和明火道具在画面里能分开 */
+function make_smoke() {
+  const g = new THREE.Group();
+  const smoke = smokePlume({ rate: 7, size: 0.55, rise: 1.4, spread: 0.16 });
+  smoke.position.y = 0.9;
+  g.add(smoke);
+  /* 脚下一只被踩灭的烟头 + 一点余烬，近看才知道是吸烟不是着火 */
+  const ember = new THREE.Mesh(
+    new THREE.SphereGeometry(0.07, 8, 6),
+    new THREE.MeshBasicMaterial({ color: 0xff8a4a })
+  );
+  ember.position.set(0.18, 0.06, 0.1);
+  g.add(ember);
+  return g;
+}
+
+/** 消防栓：红色栓体 + 两侧取水口，压在草丛里的那种 */
+function make_hydrant() {
+  const g = new THREE.Group();
+  const red = pbr("metal", { repeat: 1, tint: 0xc0342c, metalness: 0.25, roughness: 0.55 });
+  const dark = pbr("metal", { repeat: 1, tint: 0x6d2a24, metalness: 0.3, roughness: 0.7 });
+  const body = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.2, 0.72, 12), red);
+  body.position.y = 0.36;
+  g.add(body);
+  const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.16, 0.16, 10), red);
+  cap.position.y = 0.8;
+  g.add(cap);
+  for (const side of [-1, 1]) {
+    const nozzle = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 0.18, 10), dark);
+    nozzle.rotation.z = Math.PI / 2;
+    nozzle.position.set(side * 0.2, 0.5, 0);
+    g.add(nozzle);
+  }
+  /* 一圈没膝的杂草：照片里的栓体就是被草埋住的 */
+  const grass = pbr("grass", { repeat: 3, tint: 0x6f7a4a, normalScale: 0.6 });
+  for (let i = 0; i < 7; i++) {
+    const tuft = new THREE.Mesh(new THREE.ConeGeometry(0.18, 0.5 + (i % 3) * 0.12, 5), grass);
+    const a = (i / 7) * Math.PI * 2;
+    tuft.position.set(Math.cos(a) * 0.42, 0.2, Math.sin(a) * 0.42);
+    tuft.rotation.y = a;
+    g.add(tuft);
+  }
+  g.traverse((o) => {
+    if (o.isMesh) {
+      o.castShadow = true;
+      o.receiveShadow = true;
+    }
+  });
+  return g;
+}
+
+/** 灭火器异常：红色器材箱 + 半开的门，箱前放一只倒下的灭火器 */
+function make_ext() {
+  const g = new THREE.Group();
+  const red = pbr("metal", { repeat: 1, tint: 0xb32d26, metalness: 0.2, roughness: 0.6 });
+  const white = pbr("concrete_wall", { repeat: 1, tint: 0xe8e4dc, normalScale: 0.5 });
+  const box = new THREE.Mesh(new THREE.BoxGeometry(0.9, 1.15, 0.42), red);
+  box.position.y = 0.62;
+  g.add(box);
+  const panel = new THREE.Mesh(new THREE.BoxGeometry(0.74, 0.9, 0.04), white);
+  panel.position.set(0, 0.66, 0.23);
+  g.add(panel);
+  /* 门歪着挂在一边，表示箱体被打开、器材状态不明 */
+  const door = new THREE.Mesh(new THREE.BoxGeometry(0.44, 1.05, 0.05), red);
+  door.position.set(-0.52, 0.6, 0.3);
+  door.rotation.y = -0.7;
+  g.add(door);
+  const tank = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.13, 0.52, 10), red);
+  tank.position.set(0.62, 0.26, 0.28);
+  tank.rotation.z = Math.PI / 2.4;
+  g.add(tank);
+  g.traverse((o) => {
+    if (o.isMesh) {
+      o.castShadow = true;
+      o.receiveShadow = true;
+    }
+  });
+  return g;
+}
+
+/** 疏散通道堵塞：安全出口灯牌 + 下面堆着纸箱，人得侧身过 */
+function make_exit_block() {
+  const g = new THREE.Group();
+  const sign = new THREE.Mesh(
+    new THREE.BoxGeometry(0.86, 0.28, 0.06),
+    new THREE.MeshBasicMaterial({ color: 0x37ff86 })
+  );
+  sign.position.set(0, 2.1, 0);
+  g.add(sign);
+  for (const side of [-1, 1]) {
+    const post = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.03, 0.03, 2.1, 6),
+      pbr("metal", { repeat: 1, tint: 0x8f9aa0, metalness: 0.4 })
+    );
+    post.position.set(side * 0.55, 1.05, 0);
+    g.add(post);
+  }
+  const cardboard = pbr("wood", { repeat: 2, tint: 0xa8916d, normalScale: 0.7 });
+  const sizes = [
+    [0.7, 0.5, 0.6],
+    [0.6, 0.42, 0.55],
+    [0.5, 0.36, 0.5],
+    [0.66, 0.3, 0.5],
+  ];
+  sizes.forEach((s, i) => {
+    const m = new THREE.Mesh(new THREE.BoxGeometry(s[0], s[1], s[2]), cardboard);
+    m.position.set(-0.35 + (i % 2) * 0.62, s[1] / 2 + (i > 1 ? 0.34 : 0), 0.1 + (i % 3) * 0.14);
+    m.rotation.y = (i - 1.5) * 0.18;
+    g.add(m);
+  });
+  g.traverse((o) => {
+    if (o.isMesh) {
+      o.castShadow = true;
+      o.receiveShadow = true;
+    }
+  });
+  return g;
+}
+
 /**
  * 在指定像素点摆一个情景。
- * @param kind  'trash' | 'fire' | 'crowd'
+ * @param kind  'trash' | 'fire' | 'crowd' | 'smoke' | 'hydrant' | 'ext' | 'exit'
  */
 export function make_scene_prop(kind, px, seed = 1) {
   const [cx, cy] = px;
   const w = px_to_world(cx, cy);
 
   /* 聚集人群的子节点本身就是世界坐标，整组不再偏移；
-     垃圾堆与明火是本地坐标，整组挪到点位 */
+     其余道具是本地坐标，整组挪到点位 */
   let g;
   if (kind === "crowd") {
     g = crowd_cluster({ center_px: px, count: 9, seed });
   } else {
-    g = kind === "fire" ? make_fire() : make_trash(seed);
+    const maker =
+      kind === "fire"
+        ? make_fire
+        : kind === "smoke"
+          ? make_smoke
+          : kind === "hydrant"
+            ? make_hydrant
+            : kind === "ext"
+              ? make_ext
+              : kind === "exit"
+                ? make_exit_block
+                : make_trash;
+    g = maker(seed);
     g.position.set(w.x, 0, w.z);
   }
   g.userData.no_merge = true;
