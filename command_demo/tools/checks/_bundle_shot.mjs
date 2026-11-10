@@ -1,0 +1,13 @@
+import puppeteer from "puppeteer-core";
+import fs from "node:fs";
+const EDGE = ["C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe"].find((p)=>fs.existsSync(p));
+const b = await puppeteer.launch({executablePath:EDGE,headless:"new",args:["--enable-unsafe-swiftshader","--use-angle=swiftshader","--hide-scrollbars","--allow-file-access-from-files","--window-size=1600,900"]});
+const p = await b.newPage();
+const errs=[]; p.on("pageerror",e=>errs.push(e.message)); p.on("console",m=>{ if(m.type()==="error") errs.push(m.text()); });
+await p.setViewport({width:1600,height:900});
+await p.goto("file:///E:/code/demo/command_demo/%E8%A7%82%E6%84%9F%E7%89%88%E6%BC%94%E7%A4%BA.html",{waitUntil:"domcontentloaded",timeout:60000});
+await new Promise(r=>setTimeout(r,26000));
+await p.screenshot({path:"shots/bundle_new.png"});
+console.log("deck cards", await p.evaluate(()=>document.querySelectorAll(".dk-card").length));
+console.log("errors", errs.slice(0,6));
+await b.close();

@@ -1,0 +1,17 @@
+import puppeteer from "puppeteer-core";
+import fs from "node:fs";
+const EDGE = ["C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe"].find((p)=>fs.existsSync(p));
+const b = await puppeteer.launch({executablePath:EDGE,headless:"new",args:["--enable-unsafe-swiftshader","--use-angle=swiftshader","--hide-scrollbars","--window-size=1600,900"]});
+const p = await b.newPage();
+await p.setViewport({width:1600,height:900});
+await p.goto("http://localhost:5179/cinematic.html?q=high",{waitUntil:"domcontentloaded",timeout:60000});
+await new Promise(r=>setTimeout(r,22000));
+const r = await p.evaluate(()=>{
+  const c=window.__cine; c.renderer.toneMappingExposure=0.86; c.sun.intensity=3.8; c.hemi.intensity=0.55;
+  let n=0; c.scene.traverse(o=>{ const col=o.material?.color?.getHexString?.(); if(col==="d9d3c4"){o.material.color.setHex(0xcfc6b2);n++;} });
+  return n;
+});
+await new Promise(r=>setTimeout(r,1500));
+await p.screenshot({path:"shots/maq_contrast.png"});
+console.log("table",r);
+await b.close();

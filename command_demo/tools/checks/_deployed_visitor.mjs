@@ -1,0 +1,27 @@
+import puppeteer from "puppeteer-core";
+import fs from "node:fs";
+const EDGE = ["C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe"].find((p)=>fs.existsSync(p));
+const b = await puppeteer.launch({executablePath:EDGE,headless:"new",args:["--enable-unsafe-swiftshader","--use-angle=swiftshader","--hide-scrollbars","--window-size=1600,900"]});
+const st = await b.newPage(); const errs=[]; st.on("pageerror",e=>errs.push(e.message));
+await st.setViewport({width:1600,height:900});
+await st.goto("https://blog.srlove.top/aegis/",{waitUntil:"domcontentloaded",timeout:60000});
+await new Promise(r=>setTimeout(r,20000));
+
+const ph = await b.newPage(); const perr=[]; ph.on("pageerror",e=>perr.push(e.message));
+await ph.setViewport({width:390,height:844,deviceScaleFactor:2,isMobile:true,hasTouch:true});
+await ph.goto("https://blog.srlove.top/aegis/phone",{waitUntil:"networkidle2",timeout:60000});
+await ph.click("#join-cta");
+await new Promise(r=>setTimeout(r,500));
+await ph.click("#btn-demo");
+await new Promise(r=>setTimeout(r,2600));
+await ph.screenshot({path:"shots/deployed_phone_verdict.png"});
+const before = await ph.evaluate(()=>({send:document.querySelector("#btn-send")?.textContent, disabled:document.querySelector("#btn-send")?.disabled}));
+await ph.click("#btn-send");
+await new Promise(r=>setTimeout(r,2500));
+const after = await ph.evaluate(()=>({toast:document.querySelector("#toast")?.textContent?.trim(), screen:document.querySelector(".screen.is-on")?.id}));
+console.log({before, after, perr:perr.slice(0,3)});
+await new Promise(r=>setTimeout(r,1500));
+await st.screenshot({path:"shots/deployed_visitor.png"});
+console.log("screen", await st.evaluate(()=>({scene:document.querySelector(".tab.on")?.textContent, title:document.querySelector("#visitorTitle")?.textContent, visitors:document.body.innerText.includes("观众参与 1")})));
+console.log("errors", errs.slice(0,3));
+await b.close();

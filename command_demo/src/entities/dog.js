@@ -289,7 +289,7 @@ export class Dog {
     this.gaitPhase = 0;
     this.speed = 0;
     this.targetSpeed = 0;
-    this.maxSpeed = 2.4;
+    this.maxSpeed = 4.0;
     this.heading = 0;
     this.dest = null;
     this.arrived = false;

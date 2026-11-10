@@ -8,7 +8,28 @@ import { pbr } from "../core/pbr.js";
    窗、勒脚、女儿墙、屋顶设备都在这里，广场与小区共用，保证风格一致。
    ══════════════════════════════════════════════════════════════════════════ */
 
-export const FLOOR_H = 3.6;
+let _blob_tex = null;
+let _blob_mat = null;
+function contact_shadow_material() {
+  if (_blob_mat) return _blob_mat;
+  const cv = document.createElement("canvas");
+  cv.width = cv.height = 128;
+  const c = cv.getContext("2d");
+  const g = c.createRadialGradient(64, 64, 4, 64, 64, 62);
+  g.addColorStop(0, "rgba(0,0,0,0.55)");
+  g.addColorStop(0.55, "rgba(0,0,0,0.28)");
+  g.addColorStop(1, "rgba(0,0,0,0)");
+  c.fillStyle = g;
+  c.fillRect(0, 0, 128, 128);
+  _blob_tex = new THREE.CanvasTexture(cv);
+  _blob_mat = new THREE.MeshBasicMaterial({
+    map: _blob_tex, transparent: true, depthWrite: false,
+    opacity: 0.9, toneMapped: false,
+  });
+  return _blob_mat;
+}
+
+const FLOOR_H = 3.6;
 export const BAY = 3.6;
 
 /**
@@ -23,6 +44,9 @@ export function add_windows(group, pts, height, glass_mat, frame_mat, opts = {})
   const win_w = opts.win_w ?? 0.42;
   const win_h = opts.win_h ?? 0.46;
   const floors = Math.max(1, Math.floor((height - 1.8) / floor_h));
+  const seed = opts.seed ?? 1;
+  const is_set = Array.isArray(glass_mat);
+  const lit_ratio = opts.lit ?? 0.55;
 
   let area = 0;
   for (let i = 0; i < pts.length; i++) {
@@ -56,10 +80,26 @@ export function add_windows(group, pts, height, glass_mat, frame_mat, opts = {})
         const pz = -(a.y + dy * t);
         const y = 1.7 + f * floor_h;
 
+        /* 夜景：每扇窗独立决定亮不亮。用哈希而不是 Math.random，
+           同一栋楼每次切场景的灯是同一片，讲解时不会「窗子换位置」。
+           同层连着的两三扇一起亮，看起来才像办公室而不是圣诞灯。 */
+        let pane_mat = glass_mat;
+        if (is_set) {
+          const h =
+            Math.imul(i + 1, 73856093) ^
+            Math.imul(f + 1, 19349663) ^
+            Math.imul(Math.floor(k / 2) + 1, 83492791) ^
+            Math.imul(seed + 1, 2654435761);
+          const r = (h >>> 0) % 1000;
+          pane_mat = r < lit_ratio * 1000
+            ? glass_mat[((h >>> 8) % (glass_mat.length - 1))]
+            : glass_mat[glass_mat.length - 1];
+        }
+
         /* 玻璃：贴在墙外 3 厘米，深色高反射 */
         const pane = new THREE.Mesh(
           new THREE.BoxGeometry(step * win_w, floor_h * win_h, 0.03),
-          glass_mat
+          pane_mat
         );
         pane.position.set(px + nx * 0.03, y, pz + nz * 0.03);
         pane.rotation.y = yaw;
@@ -158,7 +198,10 @@ export function make_building({
   win_w,
   win_h,
   roof = true,
+  roof_mat = null,
   shrink = 0,
+  seed = 1,
+  lit = 0.55,
 }) {
   const g = new THREE.Group();
 
@@ -186,8 +229,22 @@ export function make_building({
     curveSegments: 4,
   });
   geo.rotateX(-Math.PI / 2);
-  const body = new THREE.Mesh(geo, wall_mat);
+  const body = new THREE.Mesh(geo, roof_mat ? [roof_mat, wall_mat] : wall_mat);
   g.add(body);
+
+  /* 贴地软阴影：沙盘没有 GTAO 时，楼会像浮在桌上的一堆盒子 */
+  const xs = ol.map((p) => p[0]);
+  const zs = ol.map((p) => p[1]);
+  const cx = (Math.min(...xs) + Math.max(...xs)) / 2;
+  const cz = (Math.min(...zs) + Math.max(...zs)) / 2;
+  const bw = Math.max(4, Math.max(...xs) - Math.min(...xs)) * 1.8;
+  const bd = Math.max(4, Math.max(...zs) - Math.min(...zs)) * 1.8;
+  const blob = new THREE.Mesh(new THREE.PlaneGeometry(bw, bd), contact_shadow_material());
+  blob.rotation.x = -Math.PI / 2;
+  blob.position.set(cx, 0.02, cz);
+  blob.renderOrder = 1;
+  blob.userData.no_merge = true;
+  g.add(blob);
 
   /* 勒脚：底部 0.9 米略粗、颜色更深，建筑才「长在地上」 */
   if (plinth) {
@@ -229,7 +286,7 @@ export function make_building({
     }
   }
 
-  add_windows(g, pts, height, glass_mat, frame_mat, { floor_h, bay, win_w, win_h });
+  add_windows(g, pts, height, glass_mat, frame_mat, { floor_h, bay, win_w, win_h, seed, lit });
 
   return g;
 }
@@ -247,6 +304,38 @@ export function glass_material(tint = 0x1e2a30) {
     emissive: new THREE.Color(0x0a1216),
     emissiveIntensity: 1.0,
   });
+}
+
+/* ── 亮窗组 ─────────────────────────────────────────────────────────────
+   夜里真正让一栋楼「活」起来的不是墙，是窗。
+   这里做一组共享材质：4 种暖白、2 种冷白、1 种关灯的深玻璃。
+   逐扇窗按哈希取一个，几千扇窗只多 7 个材质，合并后仍是几个大桶。 */
+let LIT_SET = null;
+
+export function lit_glass_set() {
+  if (LIT_SET) return LIT_SET;
+  const warm = [
+    [0xffc27a, 3.2],
+    [0xffd9a0, 2.6],
+    [0xffb060, 3.8],
+    [0xffe9c8, 2.0],
+  ];
+  const cool = [
+    [0xcfdfff, 2.8],
+    [0xb0c8f0, 1.9],
+  ];
+  LIT_SET = [...warm, ...cool].map(([color, inten]) => {
+    const m = glass_material(0x0a1016);
+    m.emissive = new THREE.Color(color);
+    m.emissiveIntensity = inten;
+    /* 亮窗是「从里面透出来的光」，反射太强会像镜子 */
+    m.envMapIntensity = 0.7;
+    m.roughness = 0.22;
+    return m;
+  });
+  /* 最后一格永远是关灯窗，add_windows 用它做暗部 */
+  LIT_SET.push(glass_material(0x0a1016));
+  return LIT_SET;
 }
 
 /**
@@ -294,6 +383,20 @@ export function add_distant_town(parent, {
      雾一糊，远处立刻从「散落的方块」变成「城郊」。 */
   const n_cluster = Math.max(6, Math.round(count / 6));
 
+  /* 远景楼不建窗（几十栋、上千扇，代价不值），
+     但夜里没有窗，远处就是一排灰盒子。用一层点光代替窗：
+     贴在立面上、跟着楼走，远看就是零星的灯。 */
+  const lit_pos = [];
+  const lit_col = [];
+  const warm_lit = new THREE.Color(0xffcf94);
+  const cool_lit = new THREE.Color(0xbcd6ff);
+
+  /* 单独成组：夜里保留远景城郊，沙盘皮肤里可以整组隐藏 */
+  const town = new THREE.Group();
+  town.name = "distant_town";
+  town.userData.no_merge = true;
+  parent.add(town);
+
   for (let c = 0; c < n_cluster; c++) {
     const a = rnd() * Math.PI * 2;
     const r = rMin + rnd() * (rMax - rMin);
@@ -322,13 +425,59 @@ export function add_distant_town(parent, {
       box.rotation.y = yaw + (rnd() - 0.5) * 0.06;
       box.castShadow = false;
       box.receiveShadow = true;
-      parent.add(box);
+      town.add(box);
 
       const cap = new THREE.Mesh(new THREE.BoxGeometry(w * 1.02, 0.5, d * 1.02), roof);
       cap.position.set(px, h + 0.25, pz);
       cap.rotation.y = box.rotation.y;
       parent.add(cap);
+
+      /* 立面亮窗：每栋 6~14 盏，长边多、短边少 */
+      const nw = 6 + Math.floor(rnd() * 9);
+      const cy = Math.cos(box.rotation.y);
+      const sy = Math.sin(box.rotation.y);
+      for (let k = 0; k < nw; k++) {
+        const face = Math.floor(rnd() * 4);
+        const u = rnd() * 2 - 1;
+        const y = 2.6 + rnd() * Math.max(2, h - 4.6);
+        let lx = 0;
+        let lz = 0;
+        if (face === 0) { lx = w / 2; lz = u * d / 2; }
+        else if (face === 1) { lx = -w / 2; lz = u * d / 2; }
+        else if (face === 2) { lx = u * w / 2; lz = d / 2; }
+        else { lx = u * w / 2; lz = -d / 2; }
+        lit_pos.push(
+          px + lx * cy - lz * sy,
+          y,
+          pz + lx * sy + lz * cy
+        );
+        const col = rnd() < 0.22 ? cool_lit : warm_lit;
+        lit_col.push(col.r, col.g, col.b);
+      }
     }
+  }
+
+  if (lit_pos.length) {
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute("position", new THREE.Float32BufferAttribute(lit_pos, 3));
+    geo.setAttribute("color", new THREE.Float32BufferAttribute(lit_col, 3));
+    const pts = new THREE.Points(
+      geo,
+      new THREE.PointsMaterial({
+        size: 3.2,
+        sizeAttenuation: true,
+        vertexColors: true,
+        transparent: true,
+        opacity: 0.95,
+        depthWrite: false,
+        fog: true,
+        blending: THREE.AdditiveBlending,
+        toneMapped: false,
+      })
+    );
+    pts.name = "town_windows";
+    pts.userData.no_merge = true;
+    parent.add(pts);
   }
 }
 

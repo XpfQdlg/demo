@@ -510,7 +510,7 @@ export class Monitor {
   _leg_len(best) {
     const len_m = px_distance_to_m(best.len);
     /* ETA 按有效速度估：转弯、让行都会吃掉一截，按上限 1.6 m/s 算 */
-    const v = Math.min(best.agent.entity.maxSpeed ?? best.agent.entity.max_speed ?? 1.3, 1.6);
+    const v = Math.min(best.agent.entity.maxSpeed ?? best.agent.entity.max_speed ?? 2.4, 3.8);
     return { len_m, eta_s: len_m / Math.max(0.3, v) };
   }
 

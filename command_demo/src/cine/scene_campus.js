@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { pbr, preload } from "../core/pbr.js";
-import { make_building, glass_material, add_roof_clutter, add_distant_town } from "./building.js";
+import { make_building, lit_glass_set, add_roof_clutter, add_distant_town } from "./building.js";
 import { tree, street_lamp, bench, bin, railing } from "./props.js";
 import { build_hill, scatter_hill_trees } from "../map/terrain.js";
 import { add_community } from "./scene_community.js";
@@ -43,26 +43,21 @@ function make_ground() {
   const g = new THREE.Group();
 
   /* 远处用纯色底盘：草地贴图铺 650 次，掠射角下会叠出摩尔纹横条，
-     而六百米外的地面本来也看不出纹理 */
+     而六百米外的地面本来也看不出纹理。
+     夜景把整片地压到近黑，画面里就只剩「发光的城市」本身。 */
   const lawn = new THREE.Mesh(
     new THREE.PlaneGeometry(2600, 2600),
-    new THREE.MeshStandardMaterial({ color: 0x6f8a4a, roughness: 0.96 })
+    new THREE.MeshStandardMaterial({ color: 0x101812, roughness: 0.98 })
   );
   lawn.rotation.x = -Math.PI / 2;
   /* 一公里见方的地面接阴影会出自遮挡条纹（shadow acne），地面不接 */
   lawn.receiveShadow = false;
+  lawn.userData.no_merge = true;
   g.add(lawn);
 
-  /* 近处再叠一块带贴图的草地：只在镜头拉近时有细节，
-     尺寸压到 300 米以内，纹素密度够了就不会出摩尔纹 */
-  const near = new THREE.Mesh(
-    new THREE.PlaneGeometry(300, 300),
-    pbr("grass", { repeat: 75, normalScale: 1.0, tint: 0x6f8a4a })
-  );
-  near.rotation.x = -Math.PI / 2;
-  near.position.y = 0.01;
-  near.receiveShadow = true;
-  g.add(near);
+  /* 近处原本还铺了一块 300 米的草地贴图。默认机位在 350 米外，
+     那块贴图的边界正好从画面右下斜穿过去，掠射角下还拉出一片摩尔纹，
+     看起来像地上铺了张浅色塑料布。整片统一用纯色底盘。 */
 
   /* 地面贴图试过一版：一张图铺满一平方公里，掠射角下全是摩尔纹横条，
      调各向异性也压不住。改回草地底盘，贴地要素（水、绿地、操场）仍由数据包的
@@ -105,10 +100,11 @@ function add_forest_belt(root) {
     geo.rotateX(-Math.PI / 2);
     const patch = new THREE.Mesh(
       geo,
-      pbr("grass", { repeat: 1 / 6, normalScale: 1.2, tint: 0x4b6338 })
+      pbr("grass", { repeat: 1 / 6, normalScale: 1.2, tint: 0x101b12 })
     );
     patch.position.y = 0.02;
     patch.receiveShadow = true;
+    patch.userData.no_merge = true;
     root.add(patch);
   }
 
@@ -150,7 +146,7 @@ function make_roads(group) {
   if (!R) return;
 
   /* 沥青路面：压到接近黑，环境反射调低，否则整条路会泛白 */
-  const road_mat = pbr("asphalt", { repeat: 1 / 4, tint: 0x2a2b2d, normalScale: 1.3, envIntensity: 0.35 });
+  const road_mat = new THREE.MeshStandardMaterial({ color: 0x1a1e23, roughness: 0.98, metalness: 0.0, envMapIntensity: 0.03 });
   const line_mat = new THREE.MeshStandardMaterial({ color: 0xe6e4dc, roughness: 0.82 });
 
   for (const s of R.surface) {
@@ -169,6 +165,92 @@ function make_roads(group) {
   return line_mat;
 }
 
+/* ── 夜景的「数字孪生」细节 ─────────────────────────────────────────── */
+
+/**
+ * 校界轮廓：一圈发光的青线。
+ * 夜里地面全是黑的，没有这条线，校园与周围荒野分不开；
+ * 有了它，整块地立刻被读成「一块被托管的区域」，而不是一堆散落的楼。
+ */
+function add_boundary(root) {
+  const poly = PACKAGE.zones?.campus?.polygon || [];
+  if (poly.length < 3) return;
+  const pts = to_world(poly);
+  const geo = new THREE.BufferGeometry().setFromPoints(
+    pts.map(([x, z]) => new THREE.Vector3(x, 0.42, z))
+  );
+  const line = new THREE.LineLoop(
+    geo,
+    new THREE.LineBasicMaterial({
+      color: 0x7fe6ff,
+      transparent: true,
+      opacity: 0.62,
+      toneMapped: false,
+      depthWrite: false,
+      fog: true,
+    })
+  );
+  line.name = "boundary";
+  /* 合并会把它烘成静态几何；它本来不动，但保留独立对象便于后面对齐 */
+  line.userData.no_merge = true;
+  root.add(line);
+}
+
+/**
+ * 远处的城市灯火。
+ *
+ * 远景楼是纯色体块，夜里如果只靠月光，会退成一片灰影。
+ * 在楼群位置撒一层暖色点光：低处的像路灯，高处的像亮着的窗。
+ * 点云只花一次 draw call，比给远景楼逐扇开窗便宜得多。
+ */
+function add_city_lights(root) {
+  const N = 2600;
+  const pos = new Float32Array(N * 3);
+  let s = 20261121;
+  const rnd = () => {
+    s = (s * 1664525 + 1013904223) >>> 0;
+    return s / 4294967296;
+  };
+
+  /* 先取一批「街区中心」，再在每个中心附近撒点，才不会像满天星 */
+  const hubs = [];
+  for (let i = 0; i < 60; i++) {
+    const a = rnd() * Math.PI * 2;
+    const r = 640 + rnd() * 380;
+    hubs.push([Math.cos(a) * r, Math.sin(a) * r]);
+  }
+
+  for (let i = 0; i < N; i++) {
+    const h = hubs[(rnd() * hubs.length) | 0];
+    const ang = rnd() * Math.PI * 2;
+    const rad = rnd() * rnd() * 46;
+    pos[i * 3] = h[0] + Math.cos(ang) * rad;
+    /* 三成是低处路灯，七成是楼上的窗光 */
+    pos[i * 3 + 1] = rnd() < 0.32 ? 1 + rnd() * 4 : 6 + rnd() * 34;
+    pos[i * 3 + 2] = h[1] + Math.sin(ang) * rad;
+  }
+
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+
+  const mat = new THREE.PointsMaterial({
+    color: 0xffc08a,
+    size: 2.4,
+    sizeAttenuation: true,
+    transparent: true,
+    opacity: 0.72,
+    depthWrite: false,
+    fog: true,
+    blending: THREE.AdditiveBlending,
+    toneMapped: false,
+  });
+
+  const pts = new THREE.Points(geo, mat);
+  pts.name = "city_lights";
+  pts.userData.no_merge = true;
+  root.add(pts);
+}
+
 export async function build_campus(cine) {
   await preload(
     ["grass", "asphalt", "concrete_wall", "brick", "concrete_floor", "metal", "wood", "paving", "facade"]
@@ -181,14 +263,18 @@ export async function build_campus(cine) {
 
   /* 校园本体铺一层略浅的草地。
      和外面同一块底图时，边界完全读不出来，整片就是一个大草坪；
-     铺一层不同色调的地面，加上围栏，校园才像「一个地方」。 */
+     铺一层不同色调的地面，加上围栏，校园才像「一个地方」。
+     夜里这层不能用带贴图的草地：350 米外掠射角下贴图会拉成一片灰蓝条纹，
+     还把整个小区照成一块浅色板，所以只保留色相，不要贴图。 */
   {
     const pts = to_world(PACKAGE.zones.campus.polygon).map(([x, z]) => new THREE.Vector2(x, -z));
     const geo = new THREE.ShapeGeometry(new THREE.Shape(pts));
     geo.rotateX(-Math.PI / 2);
     const base = new THREE.Mesh(
       geo,
-      pbr("grass", { repeat: 1 / 4, normalScale: 1.0, tint: 0x798c55 })
+      new THREE.MeshStandardMaterial({
+        color: 0x14200f, roughness: 1.0, metalness: 0.0, envMapIntensity: 0.04,
+      })
     );
     base.position.y = 0.02;
     base.receiveShadow = true;
@@ -196,12 +282,17 @@ export async function build_campus(cine) {
   }
 
   make_roads(root);
+  add_boundary(root);
+  /* 远景楼自己带亮窗点，不再额外撒一层城市灯：
+     那层点会落进小区里，看着像满地彩纸。 */
 
-    /* 校园尺度大，玻璃若按近景参数调会整片泛白，
-     这里压暗并降低环境反射强度 */
-  const glass = glass_material(0x141d24);
-  glass.envMapIntensity = 1.3;
-  const frame_mat = pbr("concrete_wall", { repeat: 2, tint: 0xf0ece2, normalScale: 0.4 });
+  /* 夜景：整栋楼只亮一部分窗，灯是暖的，室内是冷的 */
+  const glass = lit_glass_set();
+  const frame_mat = pbr("concrete_wall", { repeat: 2, tint: 0x8d8a80, normalScale: 0.4 });
+
+  /* 屋面单独一张材质：俯视时屋顶占画面很大，
+     跟墙同色会连成一块米色板，看不出是楼。 */
+  const roof_mat = pbr("concrete_floor", { repeat: 1 / 6, tint: 0x5e625f, normalScale: 0.9 });
 
   /* 建筑：按 kind 分材质，逐栋建 */
   let seed = 20261113;
@@ -217,19 +308,25 @@ export async function build_campus(cine) {
          早先一律用混凝土，结果整片校园铺满灰色水泥地，像工地。 */
       let flatMat;
       if (b.kind === "water") {
-        flatMat = new THREE.MeshPhysicalMaterial({
-          color: 0x2f5f74, roughness: 0.06, metalness: 0.25,
-          clearcoat: 1, clearcoatRoughness: 0.03, envMapIntensity: 2.2,
+        /* 水面不用 Physical：黄昏低角度看过去，清漆层会把太阳反成
+           一整块过曝的白，Bloom 再一扩散，半个画面都被吃掉。 */
+        flatMat = new THREE.MeshStandardMaterial({
+          color: 0x0a1a24, roughness: 0.95, metalness: 0.0, envMapIntensity: 0.03,
         });
       } else if (b.kind === "green") {
-        flatMat = pbr("grass", { repeat: 1 / 4, tint: 0x6d8a46, normalScale: 1.1 });
+        flatMat = pbr("grass", { repeat: 1 / 4, tint: 0x16231a, normalScale: 1.1 });
       } else if (b.kind === "plaza") {
-        flatMat = pbr("paving", { repeat: 1 / 2, tint: 0xb2aea4, normalScale: 0.9 });
+        flatMat = new THREE.MeshStandardMaterial({
+          color: 0x24262a, roughness: 0.95, metalness: 0.0, envMapIntensity: 0.05,
+        });
       } else if (b.kind === "sports") {
-        /* 田径场：跑道圈是砖红，内部是草绿，用平均值折中成偏暖的暗红 */
-        flatMat = pbr("concrete_floor", { repeat: 1 / 3, tint: 0x9a5c48, normalScale: 0.9 });
+        /* 田径场在夜里只需要是一块深色的地，贴图在这个尺度上看不见，
+           倒是会把月光反成一大片浅灰，把整个右半画面拉亮。 */
+        flatMat = new THREE.MeshStandardMaterial({
+          color: 0x1d1210, roughness: 0.98, metalness: 0.0, envMapIntensity: 0.04,
+        });
       } else {
-        flatMat = pbr("grass", { repeat: 1 / 4, tint: 0x778852, normalScale: 1.0 });
+        flatMat = pbr("grass", { repeat: 1 / 4, tint: 0x18231a, normalScale: 1.0 });
       }
 
       const pts = to_world(b.polygon).map(([x, z]) => new THREE.Vector2(x, -z));
@@ -238,6 +335,7 @@ export async function build_campus(cine) {
       const patch = new THREE.Mesh(geo, flatMat);
       patch.position.y = b.kind === "water" ? 0.08 : 0.03;
       patch.receiveShadow = true;
+    patch.userData.no_merge = true;
       root.add(patch);
       continue;
     }
@@ -264,12 +362,15 @@ export async function build_campus(cine) {
         wall_mat: pbr(style.slug, { repeat: 1 / 3.5, tint: style.tint, normalScale: style.h }),
         glass_mat: glass,
         frame_mat,
+        roof_mat,
         floor_h: 3.6,
         bay: 3.5,
         /* 描图轮廓被道路裁成多块，每块各套一圈女儿墙、压顶互相外溢，
            所以不规则楼体关掉女儿墙；拆成板楼的每条是独立矩形，可以带 */
         parapet: slabs.length > 0,
         shrink,
+        seed: seed + pieces.indexOf(piece) * 17,
+        lit: 0.42,
       });
 
       /* 屋顶设备：只有够大的楼才放，小配楼放了反而乱 */
@@ -316,15 +417,28 @@ export async function build_campus(cine) {
     root.add(b);
   }
 
-  /* 路灯：沿主干道摆几盏。用道路多边形的顶点当参考点 */
-  const roadOuter = PACKAGE.roads?.surface?.[0]?.outer || [];
-  for (let i = 0; i < roadOuter.length; i += Math.max(1, Math.floor(roadOuter.length / 26))) {
-    const [px, py] = roadOuter[i];
-    const [x, z] = PW(px, py);
-    const lamp = street_lamp({ h: 5.0, arm: 1.0 });
-    lamp.position.set(x, 0, z);
-    lamp.rotation.y = (i * 0.9) % (Math.PI * 2);
-    root.add(lamp);
+  /* 路灯：沿所有路面轮廓每隔 46 米摆一盏。
+     早先只取第一块路面的顶点，灯全落在最外圈，
+     校园内部的主干道一盏都没有，夜里看不出路网。 */
+  const placed = [];
+  let acc = 24;
+  for (const surf of PACKAGE.roads?.surface || []) {
+    const ring = to_world(surf.outer);
+    for (let i = 1; i < ring.length; i++) {
+      const [x, z] = ring[i];
+      const [px, pz] = ring[i - 1];
+      acc += Math.hypot(x - px, z - pz);
+      if (acc < 46) continue;
+      acc = 0;
+      /* 两块路面的拐角常常重合，挪开一点避免灯叠在一起 */
+      if (placed.some(([qx, qz]) => Math.hypot(qx - x, qz - z) < 26)) continue;
+      if (placed.length >= 84) break;
+      placed.push([x, z]);
+      const lamp = street_lamp({ h: 5.2, arm: 1.1 });
+      lamp.position.set(x, 0, z);
+      lamp.rotation.y = Math.atan2(z - pz, x - px) + Math.PI / 2;
+      root.add(lamp);
+    }
   }
 
   /* 中心广场一带加长椅与垃圾桶，让人气落在最显眼的地方 */

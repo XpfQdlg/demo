@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>AEGIS · 演示控制台</title>
+    <style>
+      :root {
+        --bg: #05090f;
+        --panel: rgba(13, 22, 34, 0.86);
+        --hair: rgba(140, 190, 230, 0.14);
+        --ink: #e8f3ff;
+        --ink-2: #93a9bf;
+        --ink-3: #5f7386;
+        --font: "Microsoft YaHei", "PingFang SC", system-ui, sans-serif;
+        --num: "Bahnschrift", "DIN Alternate", ui-monospace, monospace;
+      }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; height: 100%; }
+      body {
+        background:
+          radial-gradient(1200px 700px at 18% 0%, rgba(28, 88, 120, 0.28), transparent 62%),
+          radial-gradient(900px 600px at 92% 100%, rgba(60, 40, 120, 0.22), transparent 66%),
+          var(--bg);
+        color: var(--ink);
+        font-family: var(--font);
+        -webkit-font-smoothing: antialiased;
+        overflow: hidden;
+      }
+      .wrap {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        padding: 26px 32px 22px;
+      }
+      header {
+        display: flex;
+        align-items: flex-end;
+        gap: 18px;
+        padding-bottom: 18px;
+        border-bottom: 1px solid var(--hair);
+      }
+      .brand {
+        font: 700 22px/1 var(--font);
+        letter-spacing: 0.22em;
+      }
+      .brand span {
+        display: block;
+        margin-top: 8px;
+        font: 400 10px/1 var(--font);
+        letter-spacing: 0.26em;
+        color: var(--ink-3);
+      }
+      .head-note {
+        margin-left: 6px;
+        font-size: 13px;
+        color: var(--ink-2);
+        padding-bottom: 2px;
+      }
+      .live {
+        margin-left: auto;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 14px;
+        border: 1px solid var(--hair);
+        border-radius: 999px;
+        font-size: 11px;
+        letter-spacing: 0.1em;
+        color: var(--ink-2);
+      }
+      .live i {
+        width: 7px; height: 7px; border-radius: 50%;
+        background: #43e0a0;
+        box-shadow: 0 0 12px #43e0a0;
+      }
+      .live.off i { background: #ff5a4a; box-shadow: 0 0 12px #ff5a4a; }
+
+      main {
+        flex: 1;
+        min-height: 0;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 18px;
+        padding: 20px 0 0;
+      }
+      .model {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+        padding: 20px 22px 18px;
+        border: 1px solid var(--hair);
+        border-radius: 18px;
+        background: var(--panel);
+        overflow: hidden;
+      }
+      .model::before {
+        content: "";
+        position: absolute;
+        left: 0; right: 0; top: 0;
+        height: 3px;
+        background: var(--accent);
+        opacity: 0.85;
+      }
+      .m-top { display: flex; align-items: center; gap: 10px; }
+      .m-dot {
+        width: 8px; height: 8px; border-radius: 50%;
+        background: var(--accent);
+        box-shadow: 0 0 14px var(--accent);
+      }
+      .m-name { font-size: 19px; font-weight: 700; letter-spacing: 0.03em; }
+      .m-scene {
+        margin-left: auto;
+        padding: 5px 10px;
+        border: 1px solid var(--hair);
+        border-radius: 999px;
+        font-size: 10px;
+        letter-spacing: 0.12em;
+        color: var(--ink-2);
+      }
+      .m-tag { margin-top: 9px; font-size: 12px; color: var(--ink-2); letter-spacing: 0.03em; }
+      .m-line {
+        margin-top: 16px;
+        font-size: 10px;
+        letter-spacing: 0.2em;
+        color: var(--ink-3);
+      }
+      .m-btns {
+        flex: 1;
+        display: grid;
+        grid-template-rows: repeat(3, 1fr);
+        gap: 10px;
+        margin-top: 10px;
+      }
+      button {
+        font-family: var(--font);
+        cursor: pointer;
+        border: 0;
+        -webkit-tap-highlight-color: transparent;
+      }
+      .fire-btn {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        padding: 0 18px;
+        border: 1px solid color-mix(in srgb, var(--k) 28%, transparent);
+        border-radius: 12px;
+        background: color-mix(in srgb, var(--k) 8%, rgba(255, 255, 255, 0.02));
+        color: var(--ink);
+        text-align: left;
+        transition: background 0.15s ease, border-color 0.15s ease, transform 0.12s ease;
+      }
+      .fire-btn:active { transform: scale(0.985); }
+      .fire-btn:hover { background: color-mix(in srgb, var(--k) 15%, transparent); border-color: color-mix(in srgb, var(--k) 52%, transparent); }
+      .fire-btn:disabled { opacity: 0.45; cursor: default; }
+      .fire-btn .lv {
+        flex: 0 0 auto;
+        padding: 4px 8px;
+        border-radius: 5px;
+        background: color-mix(in srgb, var(--k) 18%, transparent);
+        color: var(--k);
+        font-size: 10px;
+        letter-spacing: 0.12em;
+      }
+      .fire-btn .nm { font-size: 17px; font-weight: 600; letter-spacing: 0.02em; }
+      .fire-btn .go {
+        margin-left: auto;
+        font-size: 11px;
+        letter-spacing: 0.14em;
+        color: var(--ink-3);
+      }
+      .fire-btn.done { border-color: var(--k); background: color-mix(in srgb, var(--k) 18%, transparent); }
+      .fire-btn.done .go { color: var(--k); }
+
+      footer {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        padding-top: 14px;
+        border-top: 1px solid var(--hair);
+      }
+      .hint { font-size: 11px; color: var(--ink-3); letter-spacing: 0.06em; }
+      .status {
+        margin-left: auto;
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        min-width: 300px;
+        justify-content: flex-end;
+        font-size: 12px;
+        color: var(--ink-2);
+        letter-spacing: 0.05em;
+      }
+      .status b { color: #fff; font-weight: 600; }
+      .status.bad b { color: #ff7a6a; }
+
+      @media (orientation: portrait) {
+        main { grid-template-columns: 1fr; grid-template-rows: 1fr 1fr; }
+        body { overflow: auto; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <header>
+        <div class="brand">AEGIS<span>STAGE CONSOLE · 演示控制台</span></div>
+        <div class="head-note">点任意情景，大屏立即四模型会诊并出警</div>
+        <div class="live" id="live"><i></i><span>检测大屏…</span></div>
+      </header>
+      <main id="models"></main>
+      <footer>
+        <div class="hint">同一 Wi-Fi 下有效 · 上报会记入「观众参与」</div>
+        <div class="status" id="status">等待操作</div>
+      </footer>
+    </div>
+    <script type="module" src="./src/tablet/main.js"></script>
+  </body>
+</html>

@@ -533,13 +533,15 @@
   .battle-top-row .sc { color: var(--aegis-amber); font-variant-numeric: tabular-nums; }
   .battle-note { margin-top: 18px; font-size: 11px; color: rgba(140, 170, 200, .5); letter-spacing: .04em; }
 </style>
+<!-- 黑白极简皮肤：整层覆盖在上面的内联样式之上，删掉这一行就退回原皮肤 -->
+<link rel="stylesheet" href="./src/theme_stage.css" />
 </head>
 <body>
   <div id="stage"></div>
   <div id="hud"><div><div class="ring"></div>正在载入环境光…</div></div>
   <!-- 在线值班员：手机端注册后显示人数与角色点 -->
   <div id="crowdBar" aria-live="polite">
-    <span class="crowd-kicker">值班员在线</span>
+    <span class="crowd-kicker">在线终端</span>
     <b id="crowdCount">0</b>
     <div id="crowdAvatars" class="crowd-avatars"></div>
   </div>
@@ -579,6 +581,10 @@
   </div>
   <div id="feed">
     <div class="panel-h">事件流 <span id="feedHint">点击地面派单</span></div>
+    <div id="feedEmpty" class="feed-empty">
+      <i></i>等待第一条现场预警…
+      <span>四模型值守中 · 等待下一条现场预警</span>
+    </div>
     <div id="feedRows"></div>
   </div>
 
@@ -598,14 +604,30 @@
     </div>
   </div>
   <!-- 观众上报：四模型会诊动效（手机 POST /api/commands 后弹出） -->
-  <div id="visitorToast" role="status" aria-live="polite">
-    <div class="v-head">
-      <span class="v-kicker">AUDIENCE · REPORT</span>
-      <b id="visitorTitle">收到观众上报</b>
-      <span class="v-scene" id="visitorScene">校园</span>
+  <div id="sceneSwitch" aria-hidden="true">
+    <div class="ss-inner">
+      <span class="ss-kicker">AEGIS · SCENE LINK</span>
+      <div class="ss-name"></div>
+      <div class="ss-tag"></div>
+      <div class="ss-bar"><i></i></div>
     </div>
-    <ol class="v-rows" id="visitorRows"></ol>
-    <div class="v-verdict pulse" id="visitorVerdict">四模型会诊中…</div>
+  </div>
+
+  <div id="visitorToast" role="status" aria-live="polite">
+    <div class="v-wrap">
+      <div class="v-head">
+        <span class="v-kicker">AUDIENCE · REPORT</span>
+        <b id="visitorTitle">收到观众上报</b>
+        <span class="v-scene" id="visitorScene">校园</span>
+      </div>
+      <ol class="v-rows" id="visitorRows"></ol>
+      <div class="v-verdict pulse" id="visitorVerdict">四模型会诊中…</div>
+      <div class="v-foot">
+        <span>主判 <b id="visitorMain">校园巡检模型</b></span>
+        <span>复核 <b>另外三个模型</b></span>
+        <span>结论已同步 <b>指挥中枢</b></span>
+      </div>
+    </div>
   </div>
   <!-- 本场战报：参与人数 / 上报次数 / 四模型命中 / 最快处置 / 值班员榜单 -->
   <div id="battlePanel" role="dialog" aria-modal="true" aria-label="本场战报">

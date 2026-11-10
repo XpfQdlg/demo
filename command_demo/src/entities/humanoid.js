@@ -235,7 +235,7 @@ export class Humanoid {
     this.gait_phase = 0;
     this.speed = 0;
     this.target_speed = 0;
-    this.max_speed = 1.3;
+    this.max_speed = 2.4;
     this.heading = 0;
     this.dest = null;
     this.mode = "idle";

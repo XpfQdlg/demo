@@ -1,0 +1,613 @@
+/* ══════════════════════════════════════════════════════════════════════════
+   theme_mono.css — 黑白极简皮肤（大屏 HUD / cinematic.html）
+
+   只覆盖皮肤层：底色、描边、字色、圆角、字重。布局、定位、尺寸全部沿用
+   cinematic.html 内联样式里的原值，所以这一层可以随时删掉，删回原皮肤。
+   3D 画面本身用 filter 降饱和，见文件末尾 #stage canvas。
+   ══════════════════════════════════════════════════════════════════════════ */
+
+:root {
+  --mono-paper: #f3f2ef;
+  --mono-card: rgba(255, 255, 255, 0.9);
+  --mono-card-solid: #ffffff;
+  --mono-ink: #111110;
+  --mono-ink-2: #55554f;
+  --mono-ink-3: #8b8b84;
+  --mono-hair: rgba(17, 17, 16, 0.16);
+  --mono-hair-soft: rgba(17, 17, 16, 0.08);
+  --mono-r: 14px;
+  --mono-mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+}
+
+body {
+  background: var(--mono-paper) !important;
+  color: var(--mono-ink) !important;
+}
+
+/* ── 载入遮罩 ─────────────────────────────────────────────────────── */
+
+#hud {
+  background: var(--mono-paper) !important;
+  color: var(--mono-ink-2) !important;
+  letter-spacing: 0.08em;
+  font-size: 12px;
+}
+
+#hud .ring {
+  border-color: rgba(17, 17, 16, 0.12) !important;
+  border-top-color: var(--mono-ink) !important;
+}
+
+/* ── 左下操作提示 / 右下角标 ───────────────────────────────────────── */
+
+/* 这两行原来直接压在 3D 画面上，浅灰字压浅灰地面看不清，
+   给它们一块纸白小标签，既是说明也当画面下沿的「收边」 */
+#tip {
+  background: rgba(243, 242, 239, 0.9) !important;
+  border: 1px solid var(--mono-hair-soft) !important;
+  border-radius: 9px !important;
+  padding: 5px 10px !important;
+  color: var(--mono-ink-2) !important;
+  font-size: 11px !important;
+  letter-spacing: 0.03em;
+}
+
+#tip b {
+  color: var(--mono-ink) !important;
+  font-weight: 600;
+}
+
+#credit {
+  background: rgba(243, 242, 239, 0.86) !important;
+  border-radius: 7px !important;
+  padding: 3px 8px !important;
+  color: var(--mono-ink-3) !important;
+  opacity: 1 !important;
+  font-size: 10px !important;
+  letter-spacing: 0.06em;
+}
+
+/* ── 顶部场景页签 ─────────────────────────────────────────────────── */
+
+#tabs {
+  background: var(--mono-card) !important;
+  border: 1px solid var(--mono-hair) !important;
+  border-radius: 999px !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  padding: 3px !important;
+}
+
+.tab {
+  background: transparent !important;
+  border: 0 !important;
+  color: var(--mono-ink-2) !important;
+  border-radius: 999px !important;
+  box-shadow: none !important;
+  font-size: 12.5px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.04em;
+}
+
+.tab:hover {
+  background: rgba(17, 17, 16, 0.05) !important;
+  color: var(--mono-ink) !important;
+}
+
+.tab.on {
+  background: var(--mono-ink) !important;
+  color: #fff !important;
+}
+
+/* ── 右上工具条 ───────────────────────────────────────────────────── */
+
+#quality {
+  background: var(--mono-card) !important;
+  border: 1px solid var(--mono-hair) !important;
+  border-radius: 999px !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+#quality .q {
+  background: transparent !important;
+  color: var(--mono-ink-3) !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  font-size: 11.5px !important;
+  font-weight: 600 !important;
+}
+
+#quality .q.on {
+  background: var(--mono-ink) !important;
+  color: #fff !important;
+}
+
+#fps {
+  color: var(--mono-ink-3) !important;
+  font-family: var(--mono-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
+}
+
+#battleBtn,
+#phoneBtn,
+#reset {
+  background: transparent !important;
+  border: 0 !important;
+  color: var(--mono-ink) !important;
+  box-shadow: none !important;
+  font-size: 11.5px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.06em;
+}
+
+#battleBtn:hover,
+#phoneBtn:hover {
+  background: var(--mono-ink) !important;
+  color: #fff !important;
+}
+
+/* ── 在线值班员 ───────────────────────────────────────────────────── */
+
+#crowdBar {
+  background: var(--mono-card) !important;
+  border: 1px solid var(--mono-hair) !important;
+  border-radius: var(--mono-r) !important;
+  color: var(--mono-ink-2) !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+#crowdBar b {
+  color: var(--mono-ink) !important;
+  font-variant-numeric: tabular-nums;
+}
+
+.crowd-kicker {
+  color: var(--mono-ink-3) !important;
+  font-size: 10px !important;
+  letter-spacing: 0.14em !important;
+  text-transform: uppercase;
+}
+
+.crowd-avatars i {
+  background: var(--mono-ink) !important;
+  color: #fff !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+/* ── 模型条 ───────────────────────────────────────────────────────── */
+
+#modelBar {
+  background: var(--mono-card) !important;
+  border: 1px solid var(--mono-hair) !important;
+  border-radius: 999px !important;
+  color: var(--mono-ink-2) !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+#modelBar b {
+  color: var(--mono-ink) !important;
+  font-weight: 600 !important;
+}
+
+#modelBar .m-dot {
+  background: var(--mono-ink) !important;
+  box-shadow: none !important;
+}
+
+#modelBar .m-sep {
+  background: var(--mono-hair) !important;
+}
+
+/* ── 两块面板：执行体 / 事件流 ─────────────────────────────────────── */
+
+#agents,
+#feed {
+  background: var(--mono-card) !important;
+  border: 1px solid var(--mono-hair) !important;
+  border-radius: var(--mono-r) !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+.panel-h {
+  color: var(--mono-ink-3) !important;
+  font-size: 10px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.14em !important;
+  text-transform: uppercase;
+  border-bottom: 0 !important;
+}
+
+.panel-h span {
+  color: var(--mono-ink-3) !important;
+  letter-spacing: 0.06em;
+}
+
+.agent-row {
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 9px !important;
+  color: var(--mono-ink) !important;
+}
+
+.agent-row:hover {
+  background: rgba(17, 17, 16, 0.05) !important;
+}
+
+.agent-row.on {
+  background: rgba(17, 17, 16, 0.06) !important;
+  box-shadow: inset 2px 0 0 var(--mono-ink) !important;
+}
+
+.agent-row .dot {
+  background: var(--mono-ink) !important;
+  box-shadow: none !important;
+}
+
+.agent-row.task .dot {
+  background: #fff !important;
+  box-shadow: inset 0 0 0 1.5px var(--mono-ink) !important;
+}
+
+.agent-row .name {
+  color: var(--mono-ink) !important;
+  font-weight: 600 !important;
+}
+
+.agent-row .st {
+  color: var(--mono-ink-3) !important;
+  font-family: var(--mono-mono);
+  font-size: 10.5px !important;
+}
+
+.feed-row {
+  background: transparent !important;
+  border: 0 !important;
+  border-bottom: 1px solid var(--mono-hair-soft) !important;
+  border-radius: 0 !important;
+  color: var(--mono-ink-2) !important;
+  box-shadow: none !important;
+}
+
+.feed-row .t {
+  color: var(--mono-ink-3) !important;
+  font-family: var(--mono-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.feed-row.warn {
+  color: var(--mono-ink) !important;
+}
+
+.feed-row.warn .t {
+  color: var(--mono-ink) !important;
+}
+
+.feed-row.ok {
+  color: var(--mono-ink-3) !important;
+}
+
+/* ── 中心吐司 ─────────────────────────────────────────────────────── */
+
+#toast {
+  background: rgba(17, 17, 16, 0.92) !important;
+  color: #fff !important;
+  border: 0 !important;
+  border-radius: 10px !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  letter-spacing: 0.02em;
+}
+
+/* ── 观众上报卡 ───────────────────────────────────────────────────── */
+
+#visitorToast {
+  background: var(--mono-card) !important;
+  border: 1px solid var(--mono-hair) !important;
+  border-radius: var(--mono-r) !important;
+  color: var(--mono-ink) !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+#visitorToast.on {
+  border-color: var(--mono-ink) !important;
+}
+
+.v-kicker {
+  color: var(--mono-ink-3) !important;
+  letter-spacing: 0.14em !important;
+  text-transform: uppercase;
+  font-size: 10px !important;
+}
+
+#visitorTitle {
+  color: var(--mono-ink) !important;
+}
+
+.v-scene {
+  color: var(--mono-ink-3) !important;
+}
+
+.v-row {
+  background: rgba(255, 255, 255, 0.6) !important;
+  border: 1px solid var(--mono-hair-soft) !important;
+  color: var(--mono-ink-2) !important;
+  box-shadow: none !important;
+}
+
+.v-row .v-dot {
+  background: var(--mono-ink) !important;
+  box-shadow: none !important;
+}
+
+.v-row.is-main {
+  background: #fff !important;
+  border-color: var(--mono-ink) !important;
+  color: var(--mono-ink) !important;
+}
+
+.v-row .v-tag {
+  background: rgba(17, 17, 16, 0.06) !important;
+  border: 0 !important;
+  color: var(--mono-ink-2) !important;
+  border-radius: 999px !important;
+}
+
+.v-verdict {
+  color: var(--mono-ink-2) !important;
+}
+
+#visitorCount {
+  color: var(--mono-ink-3) !important;
+}
+
+/* ── 手机二维码浮层 ───────────────────────────────────────────────── */
+
+#phonePanel {
+  background: rgba(10, 10, 9, 0.42) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+.phone-card {
+  background: var(--mono-card-solid) !important;
+  border: 1px solid var(--mono-hair) !important;
+  border-radius: 18px !important;
+  color: var(--mono-ink) !important;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.18) !important;
+}
+
+.phone-card .kicker {
+  color: var(--mono-ink-3) !important;
+  letter-spacing: 0.14em !important;
+  text-transform: uppercase;
+  font-size: 10px !important;
+}
+
+.phone-card h2 {
+  color: var(--mono-ink) !important;
+  letter-spacing: -0.01em;
+}
+
+.phone-card .sub {
+  color: var(--mono-ink-2) !important;
+}
+
+#phoneQR {
+  background: #fff !important;
+  border: 1px solid var(--mono-hair) !important;
+  border-radius: 12px !important;
+  box-shadow: none !important;
+}
+
+#phoneQR svg,
+#phoneQR img {
+  filter: grayscale(1) contrast(1.08);
+}
+
+.phone-url code {
+  background: #f2f1ee !important;
+  border: 1px solid var(--mono-hair-soft) !important;
+  color: var(--mono-ink) !important;
+  border-radius: 8px !important;
+  font-family: var(--mono-mono);
+  font-size: 11px !important;
+}
+
+.phone-url button {
+  background: var(--mono-ink) !important;
+  color: #fff !important;
+  border: 0 !important;
+  border-radius: 8px !important;
+  box-shadow: none !important;
+  font-weight: 600 !important;
+}
+
+.phone-url button:disabled {
+  background: rgba(17, 17, 16, 0.35) !important;
+  color: #fff !important;
+}
+
+.phone-hint {
+  color: var(--mono-ink-3) !important;
+  font-size: 11px !important;
+}
+
+#phoneClose {
+  background: rgba(17, 17, 16, 0.05) !important;
+  border: 0 !important;
+  color: var(--mono-ink-2) !important;
+  box-shadow: none !important;
+}
+
+#phoneClose:hover {
+  background: var(--mono-ink) !important;
+  color: #fff !important;
+}
+
+/* ── 语音指挥吐司 ─────────────────────────────────────────────────── */
+
+#voiceCmdToast {
+  background: var(--mono-ink) !important;
+  color: #fff !important;
+  border: 0 !important;
+  border-radius: 999px !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  font-size: 12px !important;
+  letter-spacing: 0.03em;
+}
+
+/* ── 本场战报 ─────────────────────────────────────────────────────── */
+
+#battlePanel {
+  background: rgba(10, 10, 9, 0.42) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+.battle-card {
+  background: var(--mono-card-solid) !important;
+  border: 1px solid var(--mono-hair) !important;
+  border-radius: 20px !important;
+  color: var(--mono-ink) !important;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.18) !important;
+}
+
+#battleClose {
+  background: rgba(17, 17, 16, 0.05) !important;
+  border: 0 !important;
+  color: var(--mono-ink-2) !important;
+  box-shadow: none !important;
+}
+
+#battleClose:hover {
+  background: var(--mono-ink) !important;
+  color: #fff !important;
+}
+
+.battle-kicker {
+  color: var(--mono-ink-3) !important;
+  letter-spacing: 0.16em !important;
+  text-transform: uppercase;
+  font-size: 10px !important;
+}
+
+.battle-card h2 {
+  color: var(--mono-ink) !important;
+  letter-spacing: -0.01em;
+}
+
+.battle-sub {
+  color: var(--mono-ink-2) !important;
+}
+
+.battle-stat {
+  background: #fff !important;
+  border: 1px solid var(--mono-hair-soft) !important;
+  border-radius: 12px !important;
+  box-shadow: none !important;
+}
+
+.battle-stat .k {
+  color: var(--mono-ink-3) !important;
+  letter-spacing: 0.1em !important;
+  text-transform: uppercase;
+  font-size: 10px !important;
+}
+
+.battle-stat .v {
+  color: var(--mono-ink) !important;
+  font-variant-numeric: tabular-nums;
+}
+
+.battle-stat .v small {
+  color: var(--mono-ink-3) !important;
+}
+
+.battle-model {
+  border-bottom: 1px solid var(--mono-hair-soft) !important;
+}
+
+.battle-model .n {
+  color: var(--mono-ink) !important;
+}
+
+.battle-model .bar {
+  background: rgba(17, 17, 16, 0.08) !important;
+  border-radius: 999px !important;
+}
+
+.battle-model .bar i {
+  background: var(--mono-ink) !important;
+}
+
+.battle-model .c {
+  color: var(--mono-ink-3) !important;
+  font-family: var(--mono-mono);
+}
+
+.battle-top-row {
+  background: #fff !important;
+  border: 1px solid var(--mono-hair-soft) !important;
+  border-radius: 10px !important;
+}
+
+.battle-top-row .idx {
+  background: var(--mono-ink) !important;
+  color: #fff !important;
+  border-radius: 8px !important;
+}
+
+.battle-top-row .nm {
+  color: var(--mono-ink) !important;
+}
+
+.battle-top-row .sc {
+  color: var(--mono-ink-2) !important;
+  font-variant-numeric: tabular-nums;
+}
+
+.battle-note {
+  color: var(--mono-ink-3) !important;
+}
+
+/* ── 跟随小窗 ─────────────────────────────────────────────────────── */
+
+#pipbox {
+  background: rgba(255, 255, 255, 0.86) !important;
+  border: 1px solid var(--mono-hair) !important;
+  border-radius: var(--mono-r) !important;
+  box-shadow: none !important;
+  color: var(--mono-ink) !important;
+}
+
+#pipbar {
+  background: rgba(17, 17, 16, 0.06) !important;
+}
+
+#pipbar b {
+  background: var(--mono-ink) !important;
+}
+
+/* ── 3D 画面：保持原色 ──────────────────────────────────────────────── */
+
+/* 曾经把整幅画面压成灰阶，观感太素；现在只让 UI 层黑白，地图照原样出彩。
+   这里显式写 none，既是「别再加滤镜」的占位，也方便日后想微调时改这一行。 */
+#stage canvas {
+  filter: none !important;
+}

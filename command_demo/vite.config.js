@@ -33,6 +33,11 @@ const phone_entry = {
   configureServer(server) {
     server.middlewares.use((req, res, next) => {
       const url = (req.url || "").split("?")[0];
+      if (url === "/tablet" || url === "/console") {
+        res.writeHead(302, { Location: "/tablet.html" });
+        res.end();
+        return;
+      }
       if (url === "/phone" || url === "/mobile") {
         res.writeHead(302, { Location: "/mobile.html" });
         res.end();
@@ -44,6 +49,11 @@ const phone_entry = {
   configurePreviewServer(server) {
     server.middlewares.use((req, res, next) => {
       const url = (req.url || "").split("?")[0];
+      if (url === "/tablet" || url === "/console") {
+        res.writeHead(302, { Location: "/tablet.html" });
+        res.end();
+        return;
+      }
       if (url === "/phone" || url === "/mobile") {
         res.writeHead(302, { Location: "/mobile.html" });
         res.end();
@@ -55,13 +65,24 @@ const phone_entry = {
 };
 
 export default defineConfig({
-  base: "./",
+  /* 本地默认相对路径；部署到子路径时用 AEGIS_BASE=/aegis/ 构建 */
+  base: process.env.AEGIS_BASE || "./",
   /* 第三个插件是手机与大屏之间的本机联动总线，见 tools/alert_bus.mjs */
   plugins: [root_to_cinematic, phone_entry, alert_bus_plugin()],
   server: {
     // 编辑器写入会经过临时目录，chokidar 在 Windows 上会 EBUSY，因此只监听源码树
     watch: {
-      ignored: ["**/node_modules/**", "**/.*.tmpdir/**", "**/.*.tmp", "**/_*.png"],
+      ignored: [
+        "**/node_modules/**",
+        "**/.*.tmpdir/**",
+        "**/.*.tmp",
+        "**/_*.png",
+        /* 打包与验收脚本的产物目录：npm run bundle 会先建 dist-single 再删，
+           watcher 正好逮到被删/被占用的 webp 就 EBUSY 整个服务器崩掉 */
+        "**/dist-single/**",
+        "**/dist/**",
+        "**/shots/**",
+      ],
     },
     port: 5179,
     strictPort: true,
@@ -77,8 +98,10 @@ export default defineConfig({
   },
   build: {
     target: "es2020",
-    assetsInlineLimit: 100000000,
-    cssCodeSplit: false,
+    /* 公网部署按文件发，字体/图片可缓存；单文件包用 vite.single.config.js 单独内联 */
+    /* 每个入口单独出 CSS：手机页与大屏页的 :root 变量不同，
+       合并成一份时后者的 --font 会把大屏盖掉（公网部署踩过）。 */
+    cssCodeSplit: true,
     chunkSizeWarningLimit: 3000,
     /* 三个页面：联动指挥演示（index）、观感版（cinematic）、手机预警接收（mobile） */
     rollupOptions: {
@@ -86,6 +109,7 @@ export default defineConfig({
         index: "index.html",
         cinematic: "cinematic.html",
         mobile: "mobile.html",
+        tablet: "tablet.html",
       },
     },
   },

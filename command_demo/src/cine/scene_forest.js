@@ -43,8 +43,8 @@ export async function build_forest(cine) {
 
   /* 底盘：整幅地面，颜色接近林下阴影 */
   const lawn = new THREE.Mesh(
-    new THREE.PlaneGeometry(W * MPP + 400, H * MPP + 400),
-    pbr("grass", { repeat: 320, normalScale: 1.1, tint: 0x5c7440 })
+    new THREE.PlaneGeometry(6000, 6000),
+    new THREE.MeshStandardMaterial({ color: 0x1a2614, roughness: 1.0, metalness: 0.0, envMapIntensity: 0.04, emissive: 0x0a1207, emissiveIntensity: 0.55 })
   );
   lawn.rotation.x = -Math.PI / 2;
   lawn.receiveShadow = true;
@@ -147,6 +147,137 @@ export async function build_forest(cine) {
     rock.castShadow = true;
     root.add(rock);
   }
+
+  /* 火点：森林模型的主角。
+     夜里的林海只有一片暗绿，领导看不出「火险」在哪儿；
+     给一处林间空地压上烧焦的地面、一团会跳的火、一道上升的烟，
+     再加一盏橙色点光把附近的树冠照亮，整个场景才读得懂。 */
+  function add_wildfire() {
+    if (!forests.length) return;
+    const base = path_pts.length
+      ? path_pts[Math.floor(path_pts.length * 0.42)]
+      : [W / 2, H / 2];
+    let [fx, fz] = PW(base[0], base[1]);
+    /* 往路边林子里挪 34 米，别把火放在路正中间 */
+    fx += 24;
+    fz -= 24;
+
+    const group = new THREE.Group();
+    group.name = "wildfire";
+    group.position.set(fx, 0, fz);
+    group.userData.no_merge = true;
+
+    /* 烧焦的地面 */
+    const scorch = new THREE.Mesh(
+      new THREE.CircleGeometry(34, 48),
+      new THREE.MeshStandardMaterial({ color: 0x120b08, roughness: 1.0, metalness: 0.0 })
+    );
+    scorch.rotation.x = -Math.PI / 2;
+    scorch.position.y = 0.12;
+    group.add(scorch);
+
+    /* 热区脉冲环 */
+    const ring = new THREE.Mesh(
+      new THREE.RingGeometry(32, 34, 72),
+      new THREE.MeshBasicMaterial({
+        color: 0xff5a2a, transparent: true, opacity: 0.6,
+        side: THREE.DoubleSide, blending: THREE.AdditiveBlending,
+        depthWrite: false, toneMapped: false,
+      })
+    );
+    ring.rotation.x = -Math.PI / 2;
+    ring.position.y = 0.16;
+    group.add(ring);
+
+    /* 火：几片加色光斑叠在一起 */
+    const fire_tex = (() => {
+      const c = document.createElement("canvas");
+      c.width = c.height = 128;
+      const g = c.getContext("2d");
+      const grd = g.createRadialGradient(64, 64, 0, 64, 64, 64);
+      grd.addColorStop(0, "rgba(255,214,150,0.85)");
+      grd.addColorStop(0.35, "rgba(255,150,60,0.5)");
+      grd.addColorStop(0.7, "rgba(255,80,20,0.16)");
+      grd.addColorStop(1, "rgba(255,60,0,0)");
+      g.fillStyle = grd;
+      g.fillRect(0, 0, 128, 128);
+      const t = new THREE.CanvasTexture(c);
+      t.colorSpace = THREE.SRGBColorSpace;
+      return t;
+    })();
+    const flames = [];
+    for (let i = 0; i < 16; i++) {
+      const s = new THREE.Sprite(new THREE.SpriteMaterial({
+        map: fire_tex, color: 0xffb066, transparent: true,
+        blending: THREE.AdditiveBlending, depthWrite: false,
+        opacity: 0.55, toneMapped: false,
+      }));
+      const a = rnd() * Math.PI * 2;
+      const r = rnd() * 16;
+      s.position.set(Math.cos(a) * r, 4 + rnd() * 10, Math.sin(a) * r);
+      s.scale.setScalar(7 + rnd() * 13);
+      flames.push(s);
+      group.add(s);
+    }
+
+    /* 烟：慢速上升、逐渐散开 */
+    const smoke_tex = (() => {
+      const c = document.createElement("canvas");
+      c.width = c.height = 128;
+      const g = c.getContext("2d");
+      const grd = g.createRadialGradient(64, 64, 4, 64, 64, 62);
+      grd.addColorStop(0, "rgba(190,185,180,0.55)");
+      grd.addColorStop(0.5, "rgba(150,150,150,0.22)");
+      grd.addColorStop(1, "rgba(120,120,120,0)");
+      g.fillStyle = grd;
+      g.fillRect(0, 0, 128, 128);
+      const t = new THREE.CanvasTexture(c);
+      t.colorSpace = THREE.SRGBColorSpace;
+      return t;
+    })();
+    const puffs = [];
+    for (let i = 0; i < 18; i++) {
+      const s = new THREE.Sprite(new THREE.SpriteMaterial({
+        map: smoke_tex, color: 0x8e8a84, transparent: true,
+        depthWrite: false, opacity: 0.3, toneMapped: false, fog: false,
+      }));
+      s.position.set((rnd() - 0.5) * 40, 20 + rnd() * 110, (rnd() - 0.5) * 40);
+      s.scale.setScalar(18 + rnd() * 30);
+      s.userData.phase = rnd() * 46;
+      s.userData.x0 = s.position.x;
+      s.userData.z0 = s.position.z;
+      puffs.push(s);
+      group.add(s);
+    }
+
+    /* 橙色点光照亮树冠 */
+    const glow = new THREE.PointLight(0xff7a3c, 40, 170, 1.5);
+    glow.position.set(0, 6, 0);
+    group.add(glow);
+
+    root.add(group);
+
+    cine.add_updater((dt, t) => {
+      group.rotation.y = 0;
+      flames.forEach((s, i) => {
+        const f = 0.72 + 0.28 * Math.sin(t * (6 + i * 0.7) + i * 1.7);
+        s.material.opacity = 0.3 + 0.3 * f;
+        s.position.y = 5 + 3 * Math.sin(t * 2.2 + i) + i * 0.7;
+      });
+      ring.material.opacity = 0.35 + 0.35 * (0.5 + 0.5 * Math.sin(t * 2.4));
+      ring.scale.setScalar(1 + 0.06 * Math.sin(t * 2.4));
+      glow.intensity = 22 + 8 * Math.sin(t * 5.1);
+      puffs.forEach((s, i) => {
+        const life = (t * 0.055 + i / puffs.length) % 1;
+        s.position.y = 16 + life * 150;
+        s.position.x = s.userData.x0 + Math.sin(t * 0.4 + i) * 3 + life * 8;
+        s.position.z = s.userData.z0 + life * 5;
+        s.scale.setScalar(16 + life * 44);
+        s.material.opacity = 0.3 * (1 - life) * Math.min(1, life * 5);
+      });
+    });
+  }
+  add_wildfire();
 
   /* 取景：围住整片林子 */
   if (forests.length) {

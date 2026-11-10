@@ -1,0 +1,12 @@
+import puppeteer from "puppeteer-core";
+import fs from "node:fs";
+const EDGE=["C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe"].find(p=>fs.existsSync(p));
+const b=await puppeteer.launch({executablePath:EDGE,headless:"new",args:["--enable-unsafe-swiftshader","--use-angle=swiftshader","--hide-scrollbars","--window-size=1600,900"]});
+const p=await b.newPage(); const errs=[]; p.on("pageerror",e=>errs.push(e.message));
+await p.setViewport({width:1600,height:900});
+await p.goto("http://localhost:5179/",{waitUntil:"domcontentloaded",timeout:60000});
+await new Promise(r=>setTimeout(r,24000));
+await p.screenshot({path:"shots/default_look.png"});
+console.log(await p.evaluate(()=>({body:document.body.className,exp:window.__cine?.renderer.toneMappingExposure,sun:window.__cine?.sun.intensity,cards:document.querySelectorAll(".dk-card").length})));
+console.log("errors",errs.slice(0,4));
+await b.close();

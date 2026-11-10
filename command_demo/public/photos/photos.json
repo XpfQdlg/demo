@@ -1,0 +1,50 @@
+{
+  "forest": [
+    {
+      "caption": "东部林道",
+      "file": "forest-1.jpg",
+      "kind": "fire"
+    },
+    {
+      "caption": "巡护道交叉口",
+      "file": "forest-2.jpg",
+      "kind": "trash"
+    }
+  ],
+  "community": [
+    {
+      "caption": "南门出入口",
+      "file": "community-1.jpg",
+      "kind": "crowd"
+    },
+    {
+      "caption": "三号楼一层门厅",
+      "file": "community-2.jpg",
+      "kind": "trash"
+    }
+  ],
+  "campus": [
+    {
+      "caption": "一号教学楼东侧",
+      "file": "campus-1.jpg",
+      "kind": "fire"
+    },
+    {
+      "caption": "操场北侧通道",
+      "file": "campus-2.jpg",
+      "kind": "crowd"
+    }
+  ],
+  "subway": [
+    {
+      "caption": "站厅层闸机口",
+      "file": "subway-1.jpg",
+      "kind": "crowd"
+    },
+    {
+      "caption": "二号口楼梯",
+      "file": "subway-2.jpg",
+      "kind": "trash"
+    }
+  ]
+}

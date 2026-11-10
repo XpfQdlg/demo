@@ -1,0 +1,12 @@
+import puppeteer from "puppeteer-core";
+import fs from "node:fs";
+const EDGE = ["C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe"].find((p)=>fs.existsSync(p));
+const b = await puppeteer.launch({executablePath:EDGE,headless:"new",args:["--enable-unsafe-swiftshader","--use-angle=swiftshader","--hide-scrollbars","--window-size=1600,900"]});
+const p = await b.newPage();
+await p.setViewport({width:1600,height:900});
+await p.goto("http://localhost:5179/cinematic.html?q=high",{waitUntil:"domcontentloaded",timeout:60000});
+await new Promise(r=>setTimeout(r,22000));
+await p.evaluate(()=>{ const c=window.__cine; c.grade.enabled=false; c.bloom.enabled=false; c.smaa.enabled=false; c.renderer.toneMappingExposure=1.0; });
+await new Promise(r=>setTimeout(r,1200));
+await p.screenshot({path:"shots/maq_nopost.png"});
+await b.close();

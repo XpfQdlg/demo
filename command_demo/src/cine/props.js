@@ -65,6 +65,28 @@ export function tree({ h = 7, seed = 1, tone = 0 } = {}) {
   return g;
 }
 
+/** 一张柔和的径向光斑，灯头、地面光池共用 */
+let GLOW_TEX = null;
+function glow_texture() {
+  if (GLOW_TEX) return GLOW_TEX;
+  const cv = document.createElement("canvas");
+  cv.width = cv.height = 128;
+  const c = cv.getContext("2d");
+  const g = c.createRadialGradient(64, 64, 2, 64, 64, 64);
+  g.addColorStop(0.0, "rgba(255,244,220,1)");
+  g.addColorStop(0.18, "rgba(255,226,170,0.78)");
+  g.addColorStop(0.5, "rgba(255,190,110,0.22)");
+  g.addColorStop(1.0, "rgba(255,170,80,0)");
+  c.fillStyle = g;
+  c.fillRect(0, 0, 128, 128);
+  GLOW_TEX = new THREE.CanvasTexture(cv);
+  GLOW_TEX.colorSpace = THREE.SRGBColorSpace;
+  return GLOW_TEX;
+}
+
+let HALO_MAT = null;
+let POOL_MAT = null;
+
 /** 路灯：金属杆 + 悬臂 + 灯头，灯头自发光配合 Bloom */
 export function street_lamp({ h = 4.6, arm = 0.9 } = {}) {
   const g = new THREE.Group();
@@ -84,6 +106,41 @@ export function street_lamp({ h = 4.6, arm = 0.9 } = {}) {
   const head = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.11, 0.24), glow);
   head.position.set(arm, h - 0.2, 0);
   g.add(head);
+
+  /* 夜里真正让路灯「亮」的是周围那团空气与地面的光池。
+     只给灯头自发光，三百米外只有一个像素，整条路还是黑的。 */
+  const halo = new THREE.Sprite(
+    (HALO_MAT ||= new THREE.SpriteMaterial({
+      map: glow_texture(),
+      color: 0xffd9a0,
+      transparent: true,
+      opacity: 0.38,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+      toneMapped: false,
+      fog: true,
+    }))
+  );
+  halo.position.set(arm, h - 0.18, 0);
+  halo.scale.setScalar(5.2);
+  halo.userData.no_merge = true;
+  g.add(halo);
+
+  const pool = new THREE.Mesh(
+    new THREE.PlaneGeometry(11, 11),
+    (POOL_MAT ||= new THREE.MeshBasicMaterial({
+      map: glow_texture(),
+      color: 0xffb765,
+      transparent: true,
+      opacity: 0.14,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+      toneMapped: false,
+    }))
+  );
+  pool.rotation.x = -Math.PI / 2;
+  pool.position.y = 0.055;
+  g.add(pool);
 
   return g;
 }

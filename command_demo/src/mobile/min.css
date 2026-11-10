@@ -1,0 +1,810 @@
+/* ══════════════════════════════════════════════════════════════════════════
+   mobile/min.css — 精简版手机页的唯一一份样式
+
+   只有两屏：现场预警、拍照上报。没有模型介绍、没有积分、没有小游戏，
+   所以样式也不继承旧皮肤，从设计变量开始重写，规则总量控制在旧版的 1/10。
+
+   口径：纸白底、墨黑字、1px 细线、零渐变零投影；
+   层级只靠字号与字重，唯一的重色是黑底白字的主按钮。
+   ══════════════════════════════════════════════════════════════════════════ */
+
+:root {
+  --paper: #f4f3f0;
+  --card: #ffffff;
+  --ink: #111110;
+  --ink-2: #55554f;
+  --ink-3: #8d8d86;
+  --hair: rgba(17, 17, 16, 0.1);
+  --hair-2: rgba(17, 17, 16, 0.22);
+  --r-lg: 18px;
+  --r: 14px;
+  --r-sm: 10px;
+  --font: "Inter", "PingFang SC", "Microsoft YaHei", system-ui, -apple-system, sans-serif;
+  --safe-b: env(safe-area-inset-bottom, 0px);
+  --safe-t: env(safe-area-inset-top, 0px);
+  --tab-h: 58px;
+}
+
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* 下面各处会给 img / div 设 display，会盖掉 [hidden] 自带的 display:none，
+   这里把 hidden 钉死，避免「隐藏」的占位层和照片叠在一起 */
+[hidden] {
+  display: none !important;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+}
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  overscroll-behavior-y: none;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  border: 0;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+svg.ic {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  flex: none;
+}
+
+.num {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+/* ── 外壳 ─────────────────────────────────────────────────────────── */
+
+.app {
+  min-height: 100%;
+  padding-bottom: calc(var(--tab-h) + var(--safe-b) + 12px);
+}
+
+.top {
+  position: sticky;
+  top: 0;
+  z-index: 8;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: calc(var(--safe-t) + 10px) 18px 10px;
+  background: var(--paper);
+  border-bottom: 1px solid var(--hair);
+}
+
+.brand {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+}
+
+.brand small {
+  display: block;
+  font-size: 9.5px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  color: var(--ink-3);
+  margin-top: 1px;
+}
+
+.conn {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--ink-2);
+  border: 1px solid var(--hair);
+  border-radius: 999px;
+  padding: 4px 10px;
+  background: var(--card);
+}
+
+.conn i {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--ink);
+}
+
+.conn[data-mode="demo"] i,
+.conn[data-mode="connecting"] i,
+.conn[data-mode="reconnecting"] i {
+  background: transparent;
+  border: 1px solid var(--ink-3);
+}
+
+/* ── 屏 ───────────────────────────────────────────────────────────── */
+
+.screen {
+  display: none;
+  padding: 18px;
+}
+
+.screen.is-on {
+  display: block;
+}
+
+.kicker {
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+h1 {
+  font-size: 26px;
+  line-height: 1.16;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin: 6px 0 0;
+}
+
+.sub {
+  margin: 6px 0 0;
+  font-size: 12.5px;
+  color: var(--ink-2);
+}
+
+/* 现场态势：一行三个数，用细线分隔 */
+.stats {
+  display: flex;
+  margin-top: 16px;
+  padding: 14px 0;
+  border-top: 1px solid var(--hair);
+  border-bottom: 1px solid var(--hair);
+}
+
+.stats div {
+  flex: 1;
+  min-width: 0;
+}
+
+.stats div + div {
+  border-left: 1px solid var(--hair);
+  padding-left: 14px;
+}
+
+.stats b {
+  display: block;
+  font-size: 28px;
+  line-height: 1.05;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.stats span {
+  font-size: 11px;
+  color: var(--ink-3);
+}
+
+.scene-line {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+  margin-top: 14px;
+  font-size: 12px;
+  color: var(--ink-2);
+}
+
+/* ── 事件卡片 ─────────────────────────────────────────────────────── */
+
+.sec-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin: 22px 0 10px;
+}
+
+.sec-head b {
+  font-size: 13px;
+  letter-spacing: 0.02em;
+}
+
+.sec-head span {
+  font-size: 11px;
+  color: var(--ink-3);
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.card {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  width: 100%;
+  text-align: left;
+  background: var(--card);
+  border: 1px solid var(--hair);
+  border-radius: var(--r);
+  padding: 12px;
+}
+
+/* 左边一帧现场照片：没有照片时是一条虚线相框，别留白 */
+.thumb {
+  flex: none;
+  width: 66px;
+  height: 66px;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #e9e8e4;
+  border: 1px solid var(--hair);
+  display: grid;
+  place-items: center;
+}
+
+.thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.thumb svg {
+  width: 18px;
+  height: 18px;
+  stroke: var(--ink-3);
+  stroke-width: 1.6;
+  fill: none;
+}
+
+.card-body {
+  min-width: 0;
+  flex: 1;
+}
+
+.card-h {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.card-h b {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.tag {
+  margin-left: auto;
+  font-size: 10.5px;
+  padding: 2.5px 9px;
+  border-radius: 999px;
+  border: 1px solid var(--hair-2);
+  color: var(--ink-2);
+  white-space: nowrap;
+}
+
+.tag[data-tone="active"] {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: #fff;
+}
+
+.card-meta {
+  margin-top: 5px;
+  font-size: 12px;
+  color: var(--ink-2);
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+}
+
+.card-meta em {
+  font-style: normal;
+  color: var(--ink-3);
+}
+
+.card-foot {
+  margin-top: 9px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--ink-3);
+}
+
+.dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--ink-3);
+  flex: none;
+}
+
+.empty {
+  border: 1px dashed var(--hair-2);
+  border-radius: var(--r);
+  padding: 26px 18px;
+  text-align: center;
+  color: var(--ink-3);
+  font-size: 12.5px;
+}
+
+.skel {
+  height: 76px;
+  border-radius: var(--r);
+  background: linear-gradient(90deg, #ecebe7, #f4f3f0, #ecebe7);
+  background-size: 200% 100%;
+  animation: sk 1.2s linear infinite;
+}
+
+@keyframes sk {
+  to {
+    background-position: -200% 0;
+  }
+}
+
+/* ── 上报页 ───────────────────────────────────────────────────────── */
+
+.step {
+  margin-top: 22px;
+}
+
+.step-h {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.step-h i {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--ink);
+  color: #fff;
+  font-style: normal;
+  font-size: 10.5px;
+  display: grid;
+  place-items: center;
+  flex: none;
+}
+
+.seg {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.seg button {
+  border: 1px solid var(--hair);
+  border-radius: var(--r-sm);
+  background: var(--card);
+  padding: 9px 4px;
+  font-size: 12px;
+  color: var(--ink-2);
+}
+
+.seg button.is-on {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: #fff;
+}
+
+.shot {
+  margin-top: 10px;
+  position: relative;
+  border-radius: var(--r);
+  overflow: hidden;
+  border: 1px solid var(--hair);
+  background: #ecebe7;
+  aspect-ratio: 4 / 3;
+  display: grid;
+  place-items: center;
+}
+
+.shot img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.shot-empty {
+  text-align: center;
+  color: var(--ink-3);
+  font-size: 12px;
+  padding: 10px;
+}
+
+.shot-empty svg {
+  width: 26px;
+  height: 26px;
+  margin-bottom: 6px;
+  stroke: var(--ink-3);
+}
+
+.shot-cap {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 7px 10px;
+  font-size: 10.5px;
+  color: #fff;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0), rgba(0, 0, 0, 0.55));
+}
+
+.shot-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border: 1px solid var(--hair-2);
+  border-radius: var(--r-sm);
+  background: var(--card);
+  padding: 11px 12px;
+  font-size: 13px;
+  font-weight: 500;
+  min-height: 44px;
+}
+
+.btn.primary {
+  width: 100%;
+  margin-top: 12px;
+  background: var(--ink);
+  border-color: var(--ink);
+  color: #fff;
+  font-weight: 600;
+}
+
+.btn:disabled {
+  opacity: 0.45;
+}
+
+.verdict {
+  margin-top: 10px;
+  border: 1px solid var(--hair);
+  border-radius: var(--r);
+  background: var(--card);
+  padding: 13px 14px;
+}
+
+.verdict h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.verdict h3 b {
+  font-weight: 600;
+}
+
+.verdict h3 span {
+  font-weight: 400;
+  color: var(--ink-3);
+  font-size: 12px;
+  margin-left: 6px;
+}
+
+.verdict dl {
+  margin: 10px 0 0;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 6px 12px;
+  font-size: 12px;
+}
+
+.verdict dt {
+  color: var(--ink-3);
+  white-space: nowrap;
+}
+
+.verdict dd {
+  margin: 0;
+  color: var(--ink-2);
+}
+
+.hint {
+  margin-top: 10px;
+  font-size: 11.5px;
+  color: var(--ink-3);
+  line-height: 1.55;
+}
+
+/* ── 详情抽屉 ─────────────────────────────────────────────────────── */
+
+.sheet {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: none;
+}
+
+.sheet.is-on {
+  display: block;
+}
+
+.sheet-bg {
+  position: absolute;
+  inset: 0;
+  background: rgba(10, 10, 9, 0.38);
+}
+
+.sheet-panel {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  max-height: 92%;
+  overflow: auto;
+  background: var(--paper);
+  border-radius: 20px 20px 0 0;
+  padding: 8px 18px calc(20px + var(--safe-b));
+  border-top: 1px solid var(--hair);
+}
+
+.grip {
+  width: 34px;
+  height: 3px;
+  border-radius: 999px;
+  background: var(--hair-2);
+  margin: 4px auto 12px;
+}
+
+.sheet h2 {
+  margin: 0;
+  font-size: 19px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.sheet .photo {
+  margin: 12px 0 0;
+  border-radius: var(--r);
+  overflow: hidden;
+  border: 1px solid var(--hair);
+  background: #ecebe7;
+  aspect-ratio: 16 / 9;
+  position: relative;
+}
+
+.sheet .photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.sheet .photo .shot-empty {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+}
+
+/* 照片上压一行地点说明，和上报页的 .shot-cap 同一套观感 */
+.sheet .photo .cap {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 14px 10px 7px;
+  font-size: 10.5px;
+  color: #fff;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0), rgba(0, 0, 0, 0.55));
+}
+
+.rows {
+  margin: 14px 0 0;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 8px 14px;
+  font-size: 12.5px;
+}
+
+.rows dt {
+  color: var(--ink-3);
+  white-space: nowrap;
+}
+
+.rows dd {
+  margin: 0;
+}
+
+.phases {
+  display: flex;
+  gap: 4px;
+  margin-top: 14px;
+}
+
+.phases div {
+  flex: 1;
+}
+
+.phases i {
+  display: block;
+  height: 2px;
+  background: var(--hair-2);
+  border-radius: 2px;
+}
+
+.phases div.done i {
+  background: var(--ink);
+}
+
+.phases span {
+  display: block;
+  margin-top: 5px;
+  font-size: 9.5px;
+  color: var(--ink-3);
+  text-align: center;
+}
+
+.phases div.done span {
+  color: var(--ink);
+}
+
+.sheet .close {
+  width: 100%;
+  margin-top: 16px;
+  min-height: 46px;
+  border-radius: var(--r-sm);
+  background: var(--ink);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* ── 底部导航（只有两个） ──────────────────────────────────────────── */
+
+.tabbar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 10;
+  height: calc(var(--tab-h) + var(--safe-b));
+  padding-bottom: var(--safe-b);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  background: var(--card);
+  border-top: 1px solid var(--hair);
+}
+
+.tabbar button {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  font-size: 10.5px;
+  color: var(--ink-3);
+}
+
+.tabbar button.is-on {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.tabbar .badge {
+  position: absolute;
+  left: 50%;
+  top: 7px;
+  translate: 7px 0;
+  min-width: 15px;
+  height: 15px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--ink);
+  color: #fff;
+  font-size: 9.5px;
+  line-height: 15px;
+  text-align: center;
+}
+
+/* ── 轻提示 ───────────────────────────────────────────────────────── */
+
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(var(--tab-h) + var(--safe-b) + 16px);
+  translate: -50% 0;
+  z-index: 40;
+  max-width: 84vw;
+  padding: 10px 16px;
+  border-radius: 999px;
+  background: var(--ink);
+  color: #fff;
+  font-size: 12.5px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.18s ease, translate 0.18s ease;
+}
+
+.toast.is-on {
+  opacity: 1;
+  translate: -50% -4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* 首页的参与入口：整页唯一一块黑底，路过的人第一眼就看到「能拍」 */
+.join-cta {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-areas: "k a" "t a";
+  align-items: center;
+  gap: 2px 14px;
+  width: 100%;
+  margin-top: 18px;
+  padding: 16px 18px 17px;
+  border: 0;
+  border-radius: 18px;
+  background: var(--ink);
+  color: #fff;
+  text-align: left;
+  font-family: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.join-cta:active { transform: scale(0.99); }
+.jc-k {
+  grid-area: k;
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  color: rgba(255, 255, 255, 0.55);
+}
+.jc-t {
+  grid-area: t;
+  margin-top: 5px;
+  font-size: 17px;
+  line-height: 1.32;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+.jc-a {
+  grid-area: a;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding-left: 6px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.72);
+  white-space: nowrap;
+}
+.jc-a i { font-style: normal; font-size: 15px; }

@@ -1,0 +1,14 @@
+import puppeteer from "puppeteer-core";
+import fs from "node:fs";
+const EDGE = ["C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe"].find((p)=>fs.existsSync(p));
+const b = await puppeteer.launch({executablePath:EDGE,headless:"new",args:["--enable-unsafe-swiftshader","--use-angle=swiftshader","--hide-scrollbars"]});
+const p = await b.newPage();
+const errs=[]; p.on("pageerror",e=>errs.push(e.message));
+await p.setViewport({width:390,height:844,deviceScaleFactor:2,isMobile:true,hasTouch:true});
+await p.goto("http://localhost:5179/phone",{waitUntil:"networkidle2",timeout:60000});
+await p.click("#join-cta");
+await new Promise(r=>setTimeout(r,600));
+await p.screenshot({path:"shots/phone_report.png"});
+console.log(await p.evaluate(()=>document.querySelector(".screen.is-on")?.id));
+console.log("errors",errs);
+await b.close();

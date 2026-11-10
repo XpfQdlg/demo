@@ -157,16 +157,31 @@ function validate_command(raw) {
   };
 }
 
+/**
+ * 手机能打开的局域网地址。
+ *
+ * 以前是把所有非回环 IPv4 都列出来，第一个恰好是 Hyper-V 的
+ * vEthernet (Default Switch) 172.22.112.1 —— 那是个宿主机内部虚拟网卡，
+ * 手机连不上，二维码扫出来就是「无法访问此网站」。
+ * 这里按「真实无线网卡优先」排序，并把链路本地地址与常见虚拟网卡排掉。
+ */
 function local_urls(port) {
-  const urls = [];
-  const ifaces = os.networkInterfaces();
-  for (const list of Object.values(ifaces)) {
+  const wired = [];
+  const other = [];
+  const virtual = /(vEthernet|VMware|VirtualBox|Hyper-V|Loopback|Bluetooth|WSL|Tailscale|ZeroTier)/i;
+  for (const [name, list] of Object.entries(os.networkInterfaces())) {
+    /* 虚拟网卡是宿主机内部网络，手机永远连不上，直接不列 */
+    if (virtual.test(name)) continue;
     for (const item of list || []) {
       if (item.family !== "IPv4" || item.internal) continue;
-      urls.push(`http://${item.address}:${port}`);
+      /* 169.254.x.x 是没拿到 DHCP 的链路本地地址，扫了也连不上 */
+      if (item.address.startsWith("169.254.")) continue;
+      const url = `http://${item.address}:${port}`;
+      if (/^(WLAN|Wi-?Fi|无线|以太网|Ethernet)/i.test(name)) wired.unshift(url);
+      else other.push(url);
     }
   }
-  return urls;
+  return [...wired, ...other];
 }
 
 export function alert_bus_plugin() {

@@ -1,0 +1,15 @@
+[Unit]
+Description=AEGIS stage API (alert bus)
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/aegis
+ExecStart=/usr/bin/node /opt/aegis/aegis_api.mjs
+Restart=always
+RestartSec=2
+Environment=PORT=8791
+Environment=PUBLIC_ORIGIN=https://blog.srlove.top/aegis
+
+[Install]
+WantedBy=multi-user.target

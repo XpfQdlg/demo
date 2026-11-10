@@ -33,12 +33,18 @@
 | `_visitor_probe.mjs` | 观众上报端到端：手机会诊上报 → 大屏切场景出警 → 手机观众上报卡片闭环 |
 | `_phone_v3_probe.mjs` | AEGIS 手机重设计：四 Tab、语音/AR/盲盒/我的/现场回传、320 适配 |
 | `_bigscreen_session_probe.mjs` | 大屏会话：在线值班员、本场战报、语音指挥、跟随回传帧 |
+| `_theme_probe.mjs` | 黑白皮肤验收：`mobile` 截四个 Tab、`ov` 截六个浮层、`big` 截大屏三态（`BIGWAIT` 控制大屏等待） |
+| `_color_audit.mjs` | 彩点巡检：遍历 DOM 找计算样式里还有色相的节点（灰阶阈值 max−min>10），改完主题用来确认没有彩色残留 |
 
 ## 一次性探针
 
 下面这些是排查具体问题时写的，保留是为了记录当时怎么验证的，日常不必跑：
 
 `_all4.mjs`（四场景各一张）、`_wide.mjs`、`_closeup.mjs`（任意机位）、`_map_probe.mjs`（地图俯视）、`probe_top.mjs`（俯视快照 PNG）、`_probe_conn.mjs`（西北连体楼）、`_probe_forest.mjs`、`_probe_hill.mjs`、`_probe_robots.mjs`、`_train_probe.mjs`、`_train_probe2.mjs`。
+
+改皮肤时另外写过几个只看某个节点的探针，留着方便下次定位：
+
+`_dom_dump.mjs`（打印主要容器的标签+class 骨架）、`_dom_colors.mjs`（指定节点的 computed 颜色/背景/边框）、`_probe_modelcard.mjs`（模型总览浮层四张卡）、`_probe_big.mjs`（大屏 `#tip`/`#feed` 等，附带 elementFromPoint 看谁压在谁上面）、`_hit.mjs`（给一组坐标，反查命中的元素链路）。
 
 ## 注意
 

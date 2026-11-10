@@ -100,9 +100,14 @@
 | `cinematic.html` | 观感版预览页，`?scene=campus\|community\|forest\|subway`，可加 `&q=low\|medium\|high` |
 | `src/cinematic_main.js` | 观感版入口：场景切换、取景、光照跟随、设备列表与事件流、点击派单、推送告警到手机 |
 | `src/core/cinematic.js` | 观感版渲染核心：AgX 色调映射、全景环境光、程序化天空、后处理管线 |
-| `mobile.html` | 手机端预警接收页入口，短地址 `/phone`（302 到 `mobile.html`） |
-| `src/mobile/main.js` | 手机页界面层：卡片列表、详情抽屉、筛选、新预警 toast/声音/振动 |
-| `src/mobile/ui.css` | 手机页样式：深色指挥中枢风、手机优先、安全区与减弱动效 |
+| `mobile.html` | 手机端精简页入口，短地址 `/phone`（302 到 `mobile.html`）；只有「预警」「上报」两屏 |
+| `src/mobile/min.js` | 精简页全部逻辑：列表渲染、详情抽屉、拍照与会诊、上报 POST |
+| `src/mobile/min.css` | 精简页唯一一份样式（纸白 + 墨黑，约 750 行） |
+| `public/photos/` | 现场照片库：`photos.json` 配场景、图片放同目录，手机端两处入口都读它 |
+| `src/mobile/main.js` | **旧版**界面层（模型介绍/积分/语音/AR/盲盒），已不被 `mobile.html` 引用，留作参考 |
+| `src/mobile/ui.css` | **旧版**手机页样式，已不被引用 |
+| `src/mobile/theme_mono.css` | **旧版**手机页黑白覆盖层，已不被引用 |
+| `src/theme_mono.css` | 大屏黑白极简皮肤覆盖层（含 3D 灰阶滤镜），删掉 cinematic.html 里那行 link 即回滚 |
 | `src/mobile/store.js` | 手机页状态与数据源：SSE 订阅、快照回放、离线演示兜底、持久化与未读 |
 | `src/mobile/contract.js` | 大屏与手机共用的事件契约、异常/状态元数据、时间与距离格式化 |
 | `src/mobile/demo_feed.js` | 演示模式数据源：按监控层节奏模拟完整预警生命周期 |
@@ -540,3 +545,127 @@ medium 为默认：像素比 1.2、GTAO 8 采样、阴影 2048。页面上有实
 - 验收：`tools/checks/_phone_v3_probe.mjs`、`tools/checks/_bigscreen_session_probe.mjs`；
   旧探针 `_mobile_probe`、`_visitor_probe`、`_e2e_phone_probe`、`_model_bar_probe` 全部回归。
 - 设计说明：`../docs/10_AEGIS界面重设计.md`。
+
+---
+
+## 十三、黑白极简皮肤（2026-11-09）
+
+把手机页与大屏都换成纸白 + 墨黑的极简观感，3D 画面压成灰阶。做法是**在旧皮肤上叠一层**，
+不重写原来的 CSS：
+
+| 文件 | 作用 |
+| --- | --- |
+| `src/theme_mono.css` | 大屏皮肤覆盖，`cinematic.html` 在内联 `</style>` 之后引入 |
+| `src/mobile/theme_mono.css` | 手机皮肤覆盖，`mobile.html` 在 `ui.css` 之后引入 |
+
+**回滚**：删掉对应 HTML 里那一行 `<link rel="stylesheet" href=".../theme_mono.css">`，
+立刻回到深空黑极光皮肤。旧样式一行没动。
+
+设计口径：
+
+- 纸白 `#f4f3f0`、卡白 `#fff`、墨黑 `#111110`、次级 `#55554f`、三级 `#8d8d86`；
+  细线 `rgba(17,17,16,.10)` 与 `.22`。
+- 零渐变、零发光、零毛玻璃、零投影；层级只靠**字重 + 细线 + 黑底白字**表达。
+  激活态一律是黑底白字（页签、筛选项、当前角色、主按钮）。
+- 手机端先把 `ui.css` 的语义变量（`--bg/--panel/--txt/--cyan/--danger/--ok/--amber` 等）
+  整体指到墨黑或纸白，凡是走 `var()` 的组件自动跟着变；再一刀切掉
+  `box-shadow / text-shadow / backdrop-filter / background-image`；最后让浮层内文字回落到墨黑，
+  需要白字的组件单独写 `#fff`。
+- 大屏：面板是白色半透明压在彩色 3D 画面上（像贴标签）。**3D 场景保持原色**
+  （`#stage canvas { filter: none !important }` 显式占位，方便日后微调），
+  只有 UI 层是黑白。画面里 `dog-1` 那些胶囊牌子是 canvas 贴图精灵
+  （`cinematic_main.js:910` 的 `make_badge`），默认牌面已改成黑底白字 + 白描边，
+  报警气泡 `BUBBLE_RED` / `BUBBLE_GREEN` 仍保留红/绿语义色。
+- 二维码 `#phoneQR` 也跟着 `grayscale(1)`，扫描仍正常。
+- 手机端代表现场画面的图（盲盒图片 `.quiz-image`、拍照预览 `.join-preview`、
+  预警抽屉里的 `.sheet-live-frame img`）都是彩色的，`filter: none`。
+
+### 画面抖动（闪烁）的三个来源与处理
+
+1. **后期颗粒**：`src/core/cinematic.js:31` 的 `GradeShader` 原来 `u_grain: 0.022`，
+   噪声每帧用 `u_time` 重算，整幅画面固定在 ±2% 的随机抖动里重画，看起来就是「沙沙地闪」。
+   现已置为 `0`（想恢复胶片感就把 `u_grain` 调回 0.02，并把 `fragmentShader` 里的
+   `u_time` 换成固定值，否则又变成逐帧噪声）。
+2. **远景贴图摩尔纹**：`src/core/pbr.js:63` 的各向异性从 8 提到 16（超出硬件上限由 three 截断）。
+3. **抗锯齿**：渲染器 `antialias: false`，抗锯齿走后期 `SMAAPass`，中档 `pixelRatio: 1.2`；
+   拖拽视角时边缘仍会有轻微爬行，切到「高」档（`pixelRatio: 2.0`）即可，代价是帧率。
+
+量化手段：`node tools/checks/_flicker_probe.mjs --scene=campus` 连拍两帧逐像素比对，
+输出 `diffRatio`（差异像素占比）与 20×12 的差异网格。修之前是 40.8%，
+修完 12.8%，且差异集中在会走动的 dog/person 所在网格——也就是只剩「该动的东西」。
+
+验收：
+
+```bash
+node tools/checks/_theme_probe.mjs mobile   # 四个 Tab → shots/theme_mobile_*.png
+node tools/checks/_theme_probe.mjs ov       # 六个浮层 → shots/theme_ov_*.png
+node tools/checks/_theme_probe.mjs big      # 大屏三态 → shots/theme_big_*.png
+node tools/checks/_color_audit.mjs          # 彩色残留应为 0 处
+```
+
+`_color_audit.mjs` 会遍历整棵 DOM 找「计算样式里还有明显色相」的节点（`max−min > 10` 即算有彩），
+改完主题跑一遍，四处 Tab 与六个浮层都应是 `0 处`。改完记得 `npm run bundle` 重打单文件。
+
+> 注：`_theme_probe.mjs` 的 `mobile` / `ov` 模式与 `_color_audit.mjs` 都是针对**旧版**手机页选择器写的，
+> 现在 `mobile.html` 已经换成精简版（见第十四节），这两个脚本只对旧版有意义。
+
+---
+
+## 十四、手机端精简版（2026-11-09）
+
+用户反馈「移动端界面简洁一些，功能越少越好」，所以把手机页砍到只剩两件事：
+**看现场预警**、**拍一张照片上报**。
+
+| 去掉 | 保留 |
+| --- | --- |
+| 四大模型应用总览、本场战报与积分 Top 榜、我的/身份切换、语音上报、巡检点打卡、模型盲盒、底部四个 Tab | 预警（态势 + 事件流）、上报（拍照 + 四模型会诊 + 一键上报）、底部两个 Tab |
+| | 预警详情抽屉：现场照片、异常/状态/时间/场景/监控点/主判模型/置信度/执行体/距离、五段进度 |
+
+新文件：`mobile.html`（161 行）、`src/mobile/min.css`（约 760 行）、`src/mobile/min.js`。
+旧的 `src/mobile/main.js` / `ui.css` / `theme_mono.css` 已**不被任何页面引用**，留在原处存档，
+要找回旧版就把 `mobile.html` 里的两个 link/script 换回去。
+
+设计口径：纸白底 + 墨黑字 + 1px 细线，不用渐变与投影；唯一的黑底白字是主按钮、
+进行中状态标签与底部导航的激活图标。列表卡片左边带一帧 66px 的现场照片缩略图。
+
+### 换成学校的真实照片
+
+照片库在 `public/photos/`，手机端两处入口都读它：
+
+1. **预警详情里的「现场照片」**：按预警 id 稳定散列到该场景的一批照片里，同一条预警不会每次刷新都换图。
+2. **上报页的「用演示照片」**：按顺序轮播当前所选场景的图片，选完立刻触发四模型会诊。
+
+放照片只需两步，代码不用动：
+
+```text
+public/photos/
+  campus-1.jpg  campus-2.jpg  …
+  photos.json
+```
+
+```json
+{
+  "campus": [
+    { "file": "campus-1.jpg", "caption": "一号教学楼东侧", "kind": "fire" },
+    { "file": "campus-2.jpg", "caption": "操场北侧通道",   "kind": "crowd" }
+  ],
+  "community": [ … ], "subway": [ … ], "forest": [ … ]
+}
+```
+
+- `file` 相对 `public/photos/`；`caption` 是压在照片左下角的地点说明（详情抽屉里显示）；
+  `kind` 取 `fire` / `crowd` / `trash`，决定会诊结论用哪一类异常，可省略（会按散列自动挑）。
+- 场景键只有 `campus` / `community` / `subway` / `forest` 四个。
+- 目前放的是程序生成的占位图（相机线稿 + 「演示占位图」），直接覆盖同名文件即可替换；
+  图片建议 3:2 或 16:9、长边 1200~1600px，单张 300 KB 以内，手机端加载才不拖。
+- `photos.json` 读不到时页面照常工作，只是不显示照片。
+
+### 验收
+
+```bash
+node tools/checks/_min_probe.mjs
+```
+
+会依次截图 `shots/min_alerts.png`、`min_sheet.png`、`min_report.png`、`min_verdict.png`、
+`min_sent.png`，并打印：连接模式、卡片数、详情里的照片实际尺寸、会诊结论、
+上报请求的响应（应为 `200 {"ok":true,…}`）与控制台错误（应为 clean）。

@@ -8,10 +8,24 @@ import { tickers, clearTicks } from "./core/kit.js";
 import { build_subway } from "./cine/scene_subway.js";
 import { build_forest } from "./cine/scene_forest.js";
 import { Monitor } from "./cine/monitor.js";
+import { maquette_palette } from "./cine/maquette.js";
+import { mount_battle_map } from "./views/battle_map.js";
 import { px_to_world, world_to_px } from "./map/coords.js";
 import { alert_stats, publish_incident, publish_scene } from "./core/alert_publish.js";
 import { install_phone_link } from "./views/phone_link.js";
 import { KIND_META, MODEL_ORDER, SCENE_MODELS } from "./mobile/contract.js";
+import {
+  chain_stage,
+  deck_agents,
+  deck_alert,
+  deck_set_active,
+  deck_visitors,
+  mount_chain,
+  mount_clock,
+  mount_deck,
+  paint_consult,
+} from "./views/deck.js";
+import { mount_join } from "./views/join.js";
 import PACKAGE from "./map/data/map_package.json";
 
 /* 观感版预览页：两个场景可切换，无 UI 遮挡，只用来验证画质。
@@ -82,6 +96,7 @@ function update_model_bar(tab) {
   const model = scene_model_of(tab);
   modelBarEl?.style.setProperty("--model-accent", model.accent);
   if (modelNameEl) modelNameEl.textContent = model.name;
+  deck_set_active(tab);
   if (modelMetaEl) modelMetaEl.textContent = `四模型接入 · ${model.scene_label}场景 · ${model.coverage}`;
   if (feedHintEl) feedHintEl.textContent = `${model.short} · 点击地面派单`;
 }
@@ -143,7 +158,7 @@ async function ensure_scene(name) {
   return false;
 }
 
-/** 大屏会诊面板：四个模型逐行点亮，最后给结论 */
+/** 大屏会诊：整屏铺开，四个模型依次亮起，最后给结论 */
 function show_visitor_overlay(cmd) {
   const main = SCENE_MODELS[cmd.scene] || SCENE_MODELS.campus;
   const pct = Math.round((Number(cmd.confidence) || 0.9) * 100);
@@ -152,7 +167,9 @@ function show_visitor_overlay(cmd) {
       accent: main.accent,
       main: true,
       tag: "主判",
-      text: `${main.name} · 识别到「${cmd.name}」· 置信度 ${pct}%`,
+      model: main.name,
+      pct,
+      text: `识别到「${cmd.name}」· ${cmd.scene_label}场景，逐帧复核通过。`,
     },
   ];
   for (const key of MODEL_ORDER) {
@@ -162,50 +179,39 @@ function show_visitor_overlay(cmd) {
       accent: meta.accent,
       main: false,
       tag: "复核",
-      text: `${meta.short} · ${VISITOR_REVIEW[key]}`,
+      model: meta.name,
+      state: "复核通过",
+      text: (VISITOR_REVIEW[key] || "").replace(/^复核：/, ""),
     });
   }
 
-  visitorTitleEl.textContent = `收到观众上报 · ${cmd.name}`;
-  visitorSceneEl.textContent = `${cmd.scene_label} · ${main.name}`;
-  visitorRowsEl.replaceChildren(
-    ...rows.map((row) => {
-      const li = document.createElement("li");
-      li.className = `v-row${row.main ? " is-main" : ""}`;
-      li.style.setProperty("--row-accent", row.accent);
-      const dot = document.createElement("span");
-      dot.className = "v-dot";
-      const text = document.createElement("span");
-      text.textContent = row.text;
-      const tag = document.createElement("span");
-      tag.className = "v-tag";
-      tag.textContent = row.tag;
-      li.append(dot, text, tag);
-      return li;
-    })
-  );
-  visitorVerdictEl.textContent = "四模型会诊中…";
+  const kicker = document.querySelector("#visitorToast .v-kicker");
+  if (kicker) kicker.textContent = cmd._auto ? "STAGE · AUTO DRILL" : "AUDIENCE · REPORT";
+  visitorTitleEl.textContent = cmd._auto ? `自动演练 · 现场发现「${cmd.name}」` : `现场发现「${cmd.name}」`;
+  visitorSceneEl.textContent = `${cmd.scene_label} · ${main.short}主判`;
+  const mainEl = document.getElementById("visitorMain");
+  if (mainEl) mainEl.textContent = main.name;
+  paint_consult(rows, { verdict: "四模型会诊中…" });
   visitorVerdictEl.classList.add("pulse");
   visitorToastEl.classList.add("on");
 
-  /* 逐行点亮：主判先出，三个复核模型依次跟上 */
-  const nodes = [...visitorRowsEl.children];
-  nodes.forEach((node, index) => {
-    setTimeout(() => node.classList.add("on"), 120 + index * 260);
-  });
-
   clearTimeout(interaction.overlay_timer);
-  interaction.overlay_timer = setTimeout(() => visitorToastEl.classList.remove("on"), 12000);
+  interaction.overlay_timer = setTimeout(() => {
+    visitorToastEl.classList.remove("on");
+    last_touch = Date.now();
+  }, 12000);
 }
 
 function bump_visitor_count() {
   interaction.reports += 1;
   if (visitorCountEl) visitorCountEl.textContent = `观众参与 ${interaction.reports}`;
+  deck_visitors(interaction.reports);
 }
 
 /** 处理一条观众上报：会诊动效 → 切到上报场景 → 监控层真实报警派单 */
 async function handle_visitor_command(cmd) {
   const started = performance.now();
+  last_touch = Date.now();
   /* 已由兜底流程处置过的的不重复出警（大屏可能卡在切场景 >15 秒） */
   if (await visitor_already_handled(cmd.id)) {
     visitorVerdictEl.textContent = "该上报已由兜底流程处置，未重复出警";
@@ -247,15 +253,15 @@ async function handle_visitor_command(cmd) {
   }
 
   const model = scene_model_of(monitor_tab());
-  log_event(`【观众上报】${cmd.scene_label}${inc.name}`, "warn");
+  log_event(`${cmd._auto ? "【自动演练】" : "【观众上报】"}${cmd.scene_label}${inc.name}`, "warn");
   /* trigger 里已经同步完成派单，这里把设备与距离一并写进会诊结论 */
   const dev = inc.by ? label_of(inc.by, agents.indexOf(inc.by)) : "就近执行体";
   const dispatch_text = inc.by
     ? `已派 ${dev} 前往（约 ${Math.round(inc.distance_m)} 米，预计 ${Math.round(inc.eta_s)} 秒到位）`
     : "已下发就近处置指令";
-  visitorVerdictEl.textContent = `研判结论：${KIND_META[inc.kind]?.level_label || "高危"} · ${dispatch_text}`;
+  visitorVerdictEl.textContent = `${KIND_META[inc.kind]?.level_label || "高危"} · ${dispatch_text}`;
   visitorVerdictEl.classList.remove("pulse");
-  show_toast(`收到观众上报：${cmd.scene_label}发现${inc.name} · ${dev} 前往处置`);
+  show_toast(`${cmd._auto ? "自动演练" : "收到观众上报"}：${cmd.scene_label}发现${inc.name} · ${dev} 前往处置`);
 }
 
 /** 串行处理观众上报：两条命令同时要求切场景时，不能各建各的场景，
@@ -574,10 +580,19 @@ const FOREST_POLYS = PACKAGE.zones?.forest?.forests?.length
   : [PACKAGE.zones?.forest?.polygon].filter(Boolean);
 
 const VIEWS = {
-  campus: view_of([CAMPUS_POLY], { theta: 5.29, phi: 1.02, fit: 0.95, fog: [900, 2400], env: 0.55 }),
-  community: view_of([COMM_POLY], { theta: 0.95, phi: 1.00, fit: 1.1, fog: [420, 1300], env: 0.58 }),
-  forest: view_of(FOREST_POLYS, { theta: 0.85, phi: 0.72, fit: 1.15, fog: [260, 1100], env: 0.6 }),
-  subway: { theta: 1.5708, phi: 0.02, fit: 0.34, fog: [110, 420], env: 0.55 },
+  campus: view_of([CAMPUS_POLY], { theta: 5.29, phi: 0.54, fit: 0.64, env: 0.55 }),
+  community: view_of([COMM_POLY], { theta: 0.95, phi: 0.95, fit: 1.14, env: 0.58 }),
+  forest: view_of(FOREST_POLYS, { theta: 4.2, phi: 0.60, fit: 0.42, env: 0.6 }),
+  subway: { theta: 1.5708, phi: 0.02, fit: 0.3, env: 0.55 },
+};
+
+/* 雾按场景缩放：雾太远等于没有，太近会把主角设备吞掉。
+   地铁是室内，雾要收得很紧，否则站厅尽头会浮出一层灰。 */
+const NIGHT_FOG = {
+  campus: [1.0, 1.0],
+  community: [0.85, 0.85],
+  forest: [2.2, 2.8],
+  subway: [0.06, 0.13],
 };
 
 /* 小区页签不再单独建场景：它就在校园东南角，是同一块地上的一部分。
@@ -675,6 +690,27 @@ let current_root = null;   // 当前挂进场景的根节点
 let busy = false;
 let monitor = null;        // 监控与报警调度，切场景时重建
 
+/** 每个场景的底色：室内收紧雾、压低天光，室外留出远景层次 */
+function apply_night_view(name) {
+  if (LOOK === "maquette") {
+    /* 站厅是室内：把太阳关掉、压低环境光，靠它自己的灯 */
+    const indoor = name === "subway";
+    cine.sun.intensity = indoor ? 0.7 : 3.2;
+    cine.hemi.intensity = indoor ? 0.7 : 1.0;
+    cine.renderer.toneMappingExposure = indoor ? 0.82 : 1.02;
+    return;
+  }
+  const L = LOOKS[LOOK] || LOOKS.dusk;
+  const f = NIGHT_FOG[name] || NIGHT_FOG.campus;
+  cine.set_fog(name === "subway" ? 0x0b0e13 : L.fog, L.fogNear * f[0], L.fogFar * f[1]);
+  /* 地铁顶棚挡住了天空，月光进不来，靠站厅自己的灯 */
+  cine.sun.intensity = name === "subway" ? L.sun * 0.22 : L.sun;
+  /* 站厅全是浅色混凝土，同一档曝光会过曝成一片白，压一档 */
+  cine.renderer.toneMappingExposure = name === "subway" ? L.exposure * 0.62 : L.exposure;
+  /* 小区窗密度是校园的两倍，同一档 Bloom 会把整片楼洗成一团光雾 */
+  cine.bloom.strength = L.bloom * (name === "community" ? 0.55 : 1);
+}
+
 /** 切场景：卸掉旧场景、建新场景、重设机位 */
 async function show(name) {
   if (busy || current === name) return;
@@ -701,7 +737,8 @@ async function show(name) {
 
     frame_object(current_root, VIEWS[name]);
     const fc = current_root.userData.frame || { center: [0, 0] };
-    cine.focus_sun(fc.center, Math.max(80, fc.span * 0.8), VIEWS[name].theta + 1.15);
+    cine.focus_sun(fc.center, Math.max(80, fc.span * 0.8), VIEWS[name].theta + 1.15, (LOOKS[LOOK] || LOOKS.dusk).sunElevation ?? 0.7);
+    apply_night_view(name);
     update_model_bar(name);
     current = name;
     busy = false;
@@ -734,6 +771,9 @@ async function show(name) {
 
   cine.scene.add(root);
   cine.register_csm(root);
+  /* 沙盘皮肤：只换材质，不动几何与交互。
+     地铁是室内，保留它自己的 PBR 与灯，否则会退成一堆白盒子。 */
+  if (LOOK === "maquette" && name !== "subway") maquette_palette(root);
   current_root = root;
 
   /* 设备列表跟着场景换；旧的跟随对象已经卸载，必须解除，
@@ -774,7 +814,8 @@ async function show(name) {
   /* 光照跟随场景中心，否则阴影相机罩不到，画面有光没影 */
   const f = root.userData.frame || { center: [0, 0] };
   /* 太阳方位 = 相机方位 + 1.15 弧度，光从镜头左前上方来 */
-  cine.focus_sun(f.center, Math.max(80, f.span * 0.8), VIEWS[name].theta + 1.15);
+  cine.focus_sun(f.center, Math.max(80, f.span * 0.8), VIEWS[name].theta + 1.15, (LOOKS[LOOK] || LOOKS.dusk).sunElevation ?? 0.7);
+  apply_night_view(name);
 
   update_model_bar(name);
   current = name;
@@ -782,6 +823,129 @@ async function show(name) {
 }
 
 tabs.forEach((t) => t.addEventListener("click", () => show(t.dataset.scene)));
+
+/* ── 展台自动巡演 ────────────────────────────────────────────────────────
+   没人碰屏幕的时候，每隔 26 秒换一个场景，四个模型轮流当主角。
+   有人上手（点击/滚动/按键/上报）就暂停，安静 26 秒后再接着转。
+   这是展台无人值守时最省事的一层「导演」。 */
+const CYCLE = ["campus", "community", "forest", "subway"];
+let last_touch = Date.now();
+let cycling = false;
+const boot_at = Date.now();
+
+const note_touch = () => {
+  last_touch = Date.now();
+};
+["pointerdown", "wheel", "keydown", "touchstart"].forEach((ev) =>
+  window.addEventListener(ev, note_touch, { passive: true })
+);
+
+async function cycle_to(name) {
+  const veil = document.getElementById("sceneSwitch");
+  const meta = SCENE_MODELS[name];
+  if (veil && meta) {
+    veil.style.setProperty("--accent", meta.accent);
+    veil.querySelector(".ss-name").textContent = meta.name;
+    veil.querySelector(".ss-tag").textContent = meta.tagline;
+    veil.classList.add("on");
+    await new Promise((r) => setTimeout(r, 620));
+  }
+  await show(name);
+  if (veil) {
+    await new Promise((r) => setTimeout(r, 240));
+    veil.classList.remove("on");
+  }
+}
+
+function start_autorun() {
+  setInterval(() => {
+    if (cycling || busy) return;
+    /* 开场先让操作员把第一段讲完，45 秒后才开始自己转 */
+    if (Date.now() - boot_at < 45000) return;
+    if (visitorToastEl?.classList.contains("on")) return;
+    if (Date.now() - last_touch < 26000) return;
+    const next = CYCLE[(CYCLE.indexOf(current) + 1) % CYCLE.length];
+    if (!next || next === current) return;
+    cycling = true;
+    last_touch = Date.now();
+    cycle_to(next)
+      .catch((e) => console.warn("cycle", e))
+      .finally(() => {
+        cycling = false;
+        last_touch = Date.now();
+      });
+  }, 1000);
+}
+
+/* ── 自动演练：无人操作时自己走一遍「四模型会诊」 ─────────────────
+   展台上人流断档时，画面不能只是一直转机位。每 90 秒左右挑下一个场景，
+   用同一条 visitor_report 链路做一次会诊 + 出警，让领导随时抬头都能看到
+   四模型协同的完整故事。真实观众操作会不断刷新 last_touch，演练自动让位。 */
+/* ── 镜头呼吸：无人操作时缓慢横移，静止画面会显得像一张截图 ────────── */
+function start_camera_drift() {
+  let prev = performance.now();
+  let dir = 1;
+  const tick = (now) => {
+    const dt = Math.min(0.05, (now - prev) / 1000);
+    prev = now;
+    if (!document.hidden && !busy && !cycling && follow_idx < 0 && current) {
+      if (Date.now() - last_touch > 9000) {
+        /* 偶尔换个方向，避免一直往一个方向转到背面 */
+        cine.theta += dir * dt * 0.006;
+        if (Math.random() < 0.0004) dir *= -1;
+      }
+    }
+    requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
+}
+const DRILL_KIND = { campus: "fire", community: "crowd", forest: "fire", subway: "crowd" };
+let drilling = false;
+let last_drill = Date.now();
+
+function stage_drill() {
+  if (drilling || busy || document.hidden) return;
+  if (visitorToastEl?.classList.contains("on")) return;
+  const next = CYCLE[(CYCLE.indexOf(current) + 1) % CYCLE.length];
+  const main = SCENE_MODELS[next];
+  if (!next || !main) return;
+  const kind = DRILL_KIND[next] || "fire";
+  const name = main.alert_names?.[kind] || KIND_META[kind]?.name || "现场异常";
+  drilling = true;
+  last_drill = Date.now();
+  const cmd = {
+    type: "visitor_report",
+    id: `drill-${Date.now()}`,
+    scene: next,
+    scene_label: main.scene_label,
+    kind,
+    name,
+    confidence: 0.92 + Math.random() * 0.06,
+    client_id: "stage",
+    _auto: true,
+  };
+  interaction.queue = interaction.queue
+    .catch(() => {})
+    .then(() => handle_visitor_command(cmd))
+    .catch((e) => console.warn("[drill]", e))
+    .finally(() => {
+      drilling = false;
+      last_touch = Date.now();
+    });
+}
+
+/* 调试/彩排用：控制台里 __drill() 可立刻演一遍 */
+window.__drill = () => stage_drill();
+window.__cycle = (n) => cycle_to(n);
+
+function start_stage_drill() {
+  setInterval(() => {
+    if (Date.now() - boot_at < 70000) return;
+    if (Date.now() - last_touch < 45000) return;
+    if (Date.now() - last_drill < 80000) return;
+    stage_drill();
+  }, 3000);
+}
 
 /* ── 画质档位与帧率 ───────────────────────────────────────────────── */
 
@@ -902,12 +1066,14 @@ function label_of(a, i) {
 }
 
 const BADGE_H = 128;
-const badge_font = (size) => `600 ${size}px "Microsoft YaHei", system-ui, sans-serif`;
+const badge_font = (size) => `600 ${size}px "NotoSC", "Microsoft YaHei", system-ui, sans-serif`;
 
 /* 标签宽度按文字自动算。设备牌只有「dog-1」，报警气泡是
    「1号教学楼东侧 · 明火」，固定 256 宽塞不下，所以要量一遍再开画布。
-   sizeAttenuation 关掉后 scale 是相对视口的比例，宽度得按画布比例给。 */
-function make_badge(text, { bg = "rgba(12,22,34,.82)", fg = "#8fd8ff", ring = "#3aa8e0" } = {}) {
+   sizeAttenuation 关掉后 scale 是相对视口的比例，宽度得按画布比例给。
+   默认牌面是黑底白字 + 一圈白描边（跟着 UI 的黑白极简走），
+   报警气泡仍用红/绿两套语义色，见下面的 BUBBLE_RED / BUBBLE_GREEN。 */
+function make_badge(text, { bg = "rgba(17,17,16,.86)", fg = "#ffffff", ring = "rgba(255,255,255,.9)" } = {}) {
   const probe = document.createElement("canvas").getContext("2d");
   let font = 46;
   probe.font = badge_font(font);
@@ -1040,13 +1206,37 @@ const BUBBLE_GREEN = { bg: "rgba(12,34,24,.88)", fg: "#bdffd8", ring: "#46e39a" 
  * 俯视五百米的时候，两点相距十几米只有几个像素，摄像头与事发点各冒一个
  * 会叠在一起，所以一起报警只报一个，位置放在事发点上。
  */
-function pop_bubble_at(anchor, y, text, style = BUBBLE_RED) {
+function pop_bubble_at(anchor, y, text, style = BUBBLE_RED) {  /* 同一个设备只保留最新一条气泡：连续派单时不会在它头顶叠两层 */
+  if (anchor.agent) {
+    for (let i = bubbles.length - 1; i >= 0; i--) {
+      const b = bubbles[i];
+      if (b.userData.anchor?.agent !== anchor.agent) continue;
+      marker_group.remove(b);
+      b.material?.map?.dispose?.();
+      b.material?.dispose?.();
+      bubbles.splice(i, 1);
+    }
+  }
   const sp = make_badge(text, style);
   sp.userData.anchor = anchor;
   sp.userData.y = y;
   sp.userData.life = 6;
+  sp.userData.text = text;
   marker_group.add(sp);
   bubbles.push(sp);
+}
+
+/** 派单后把「事发点」的气泡收掉，只留设备头顶那条，避免两个牌子叠在一起 */
+function clear_point_bubbles(needle) {
+  for (let i = bubbles.length - 1; i >= 0; i--) {
+    const b = bubbles[i];
+    if (!b.userData.anchor?.px) continue;
+    if (needle && !b.userData.text?.includes(needle)) continue;
+    marker_group.remove(b);
+    b.material?.map?.dispose?.();
+    b.material?.dispose?.();
+    bubbles.splice(i, 1);
+  }
 }
 
 /* ── 设备列表 / 事件流 / 点击派单 ─────────────────────────────────
@@ -1084,6 +1274,7 @@ function build_agent_rows() {
     agent_rows.push({ el: b, st, agent: a });
   });
   if (agentCountEl) agentCountEl.textContent = `${agents.length} 台`;
+  deck_agents(agents.length);
 }
 
 /** 每 0.25 秒刷一次状态，逐帧写 DOM 没必要 */
@@ -1213,6 +1404,8 @@ function on_camera_alarm({ inc }) {
   /* 抬到 5.5 米：气泡画在事发点正上方，放得太低会把地面的光圈整个盖住 */
   pop_bubble_at({ px: inc.px }, fy + 5.5, `${inc.area}发现${inc.name}`);
   log_event(`【${model.short}】${inc.area}发现${inc.name}`, "warn");
+  deck_alert(monitor_tab(), inc.name);
+  chain_stage(1, "识别 → 研判");
   publish_incident("alarm", {
     inc,
     tab: monitor_tab(),
@@ -1226,10 +1419,12 @@ function on_dispatched({ inc, agent, distance_m, eta_s }) {
   const model = scene_model_of(monitor_tab());
   show_toast(
     `${model.short}发现${inc.area}${inc.name}，已呼叫最近的 ${dev} 前往` +
-      `（约 ${Math.round(distance_m)} 米，预计 ${Math.round(eta_s)} 秒到位）· 按 ${n} 跟随`
+      `（约 ${Math.round(distance_m)} 米，预计 ${Math.round(eta_s)} 秒到位）`
   );
+  clear_point_bubbles(`${inc.area}发现${inc.name}`);
   pop_bubble(agent, `${dev} · 前往处置`);
   log_event(`派 ${dev} 前往${inc.area}（约 ${Math.round(distance_m)} 米）`);
+  chain_stage(2, "研判 → 就近调度");
 
   /* 观众上报：大屏自动跟上去，让围观的人看到「他的一键上报真的把机器狗派出去了」 */
   if (inc.visitor) {
@@ -1257,6 +1452,7 @@ function on_arrive({ inc, agent }) {
   const dev = label_of(agent, agents.indexOf(agent));
   show_toast(`${dev} 已到${inc.area}，开始识别`);
   log_event(`${dev} 到达${inc.area}`);
+  chain_stage(3, "调度 → 移动触达");
   publish_incident("arrive", {
     inc,
     tab: monitor_tab(),
@@ -1279,6 +1475,7 @@ function on_resolved({ inc, agent }) {
   show_toast(`${inc.area}${inc.name}已处置，${dev} 恢复巡检 · ${model.short}`);
   pop_bubble_at({ px: inc.px }, (monitor?.floor_y ?? 0) + 3.4, `已处置 · ${inc.name}`, BUBBLE_GREEN);
   log_event(`${inc.area}${inc.name}已处置`, "ok");
+  chain_stage(3, "已闭环 · 等待下一条");
   if (inc.visitor) {
     show_toast(`观众上报闭环：${inc.area}${inc.name}已处置，${dev} 恢复巡检`);
     if (visitorToastEl.classList.contains("on")) {
@@ -1301,6 +1498,8 @@ function on_manual_arrive({ agent }) {
 /* 帧率用真实墙钟统计，不能用逐帧 dt 累加（低帧率时会虚高） */
 let frames = 0;
 let t0 = performance.now();
+/* 监控的报警节奏必须走墙钟：dt 有上限，低帧率下 9 秒的首次报警会拖到几分钟 */
+let last_mon = performance.now();
 cine.onFrame = (dt, t) => {
   /* kit 的 ticker：行人摆臂、火焰与烟柱都挂在这里 */
   for (const fn of tickers) fn(t, dt);
@@ -1350,7 +1549,10 @@ cine.onFrame = (dt, t) => {
   }
 
   /* 监控：报警计时、就近调度、指示灯与光圈 */
-  monitor?.tick(dt);
+  const mon_now = performance.now();
+  const mon_dt = Math.min(1.2, Math.max(0, (mon_now - last_mon) / 1000));
+  last_mon = mon_now;
+  monitor?.tick(mon_dt);
 
   /* 观众上报的自动跟随：12 秒后回全局，避免讲解员被锁在某个设备视角 */
   if (interaction.follow_until && performance.now() > interaction.follow_until) {
@@ -1405,19 +1607,72 @@ addEventListener("keydown", (e) => {
   }
 });
 
+/* 两套底色都留着：夜里更「指挥中心」，黄昏更「看得清」。
+   展台默认走黄昏——领导要先看懂场景，再谈氛围。 */
+const LOOKS = {
+  dusk: {
+    exposure: 1.05,
+    sun: 2.3,
+    sunColor: 0xffdcc2,
+    hemi: 0.62,
+    hemiSky: 0x53749c,
+    hemiGround: 0x15120d,
+    bloom: 0.5,
+    threshold: 0.78,
+    horizon: 0x3a4658,
+    zenith: 0x0a1728,
+    fog: 0x2e3a4c,
+    fogNear: 520,
+    fogFar: 1600,
+    stars: true,
+    moon: false,
+    env: 0.62,
+    sunElevation: 0.30,
+  },
+  night: {
+    exposure: 1.0,
+    sun: 2.6,
+    sunColor: 0x9fb9ff,
+    hemi: 0.45,
+    hemiSky: 0x2b4668,
+    hemiGround: 0x070a0f,
+    bloom: 0.8,
+    threshold: 0.55,
+    horizon: 0x2a3648,
+    zenith: 0x03060d,
+    fog: 0x0a1220,
+    fogNear: 220,
+    fogFar: 1100,
+    stars: true,
+    moon: true,
+    env: 0.5,
+    sunElevation: 0.26,
+  },
+  /* 建筑沙盘：摄影棚光 + 干净的米白/鼠尾草绿，见 cine/maquette.js */
+  maquette: {
+    sunElevation: 0.95,
+  },
+};
+const LOOK = new URLSearchParams(location.search).get("look") || "maquette";
+
 async function boot() {
-  /* 天空与环境光 */
-  await cine.load_sky(PBR.asset_url("cinematic/sky.jpg"), {
-    intensity: 0.7,
-    horizon: 0xbcc9d4,
-    zenith: 0x6e9ccb,
+  document.body.classList.toggle("maq", LOOK === "maquette");
+  if (LOOK === "map") {
+    document.body.classList.add("map");
+    mount_battle_map();
+  }
+  mount_deck({
+    on_scene: (s) => document.querySelector(`.tab[data-scene="${s}"]`)?.click(),
   });
+  mount_chain();
+  mount_clock();
+  mount_join();
 
-  /* 雾的颜色取天空地平线的灰蓝，远处过渡不突兀 */
-  /* 雾按场景尺度给，见 VIEWS 里的 fog */
-
-
-  /* 画质档位：URL 里带 q= 优先，否则按设备给默认值 */
+  /* 黄昏 / 夜：整块 demo 的底色。
+     低模在白天的自然光下只会显得「没做完」；到了黄昏，
+     长影、暖光与亮窗会把体块读成一座真的城。 */
+  if (LOOK === "maquette") cine.set_studio();
+  else cine.set_night(LOOKS[LOOK] || LOOKS.dusk);
   const q = new URLSearchParams(location.search).get("q") || auto_quality();
   set_quality_ui(q);
 
@@ -1429,6 +1684,9 @@ async function boot() {
   /* 场景建好后再订阅指挥流：手机上报可能要求切场景，避免和首次加载抢 */
   start_interaction_channel();
   start_live_session();
+  start_autorun();
+  start_stage_drill();
+  start_camera_drift();
 }
 
 boot().catch((e) => {

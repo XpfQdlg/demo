@@ -1,0 +1,1919 @@
+/* ══════════════════════════════════════════════════════════════════════════
+   theme_mono.css — 黑白极简皮肤（手机端 AEGIS 页 / mobile.html）
+
+   加载顺序在 src/mobile/ui.css 之后，只压皮肤（底色、描边、字色、圆角、
+   字重），布局与尺寸沿用 ui.css。整层删掉即可退回原来的深色玻璃皮肤。
+
+   配色只有三档：纸白 #f4f3f0 / 卡片白 #fff / 墨黑 #111110，
+   层级靠字重、字号和 1px 细线，不靠色相和发光。
+   ══════════════════════════════════════════════════════════════════════════ */
+
+:root {
+  --m-paper: #f4f3f0;
+  --m-card: #ffffff;
+  --m-ink: #111110;
+  --m-ink-2: #55554f;
+  --m-ink-3: #8d8d86;
+  --m-hair: rgba(17, 17, 16, 0.1);
+  --m-hair-2: rgba(17, 17, 16, 0.22);
+  --m-mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+
+  /* 把 ui.css 的语义变量整体换成黑白，凡是走 var() 的地方自动跟着变 */
+  --bg: #f4f3f0;
+  --bg-deep: #ecebe6;
+  --panel: #ffffff;
+  --panel-strong: #ffffff;
+  --line: rgba(17, 17, 16, 0.1);
+  --line-strong: rgba(17, 17, 16, 0.22);
+  --txt: #111110;
+  --txt-dim: #55554f;
+  --txt-mute: #8d8d86;
+  --cyan: #111110;
+  --danger: #111110;
+  --warn: #111110;
+  --ok: #111110;
+  --amber: #111110;
+  --aurora-a: #111110;
+  --aurora-b: #111110;
+  --aurora-c: #111110;
+  --gold: #111110;
+  --gold-deep: #111110;
+  --radius-lg: 18px;
+  --radius: 14px;
+  --radius-sm: 11px;
+}
+
+/* ── 0. 全局：去掉渐变、发光、毛玻璃 ───────────────────────────────── */
+
+*,
+*::before,
+*::after {
+  box-shadow: none !important;
+  text-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  background-image: none !important;
+}
+
+html,
+body {
+  background: var(--m-paper) !important;
+  color: var(--m-ink) !important;
+}
+
+.app {
+  background: var(--m-paper) !important;
+  color: var(--m-ink) !important;
+}
+
+/* 旧的浅色字全部作废，默认继承墨黑；下面按组件再给细节上色 */
+.app *,
+.sheet *,
+.models-panel *,
+.quiz *,
+.voice *,
+.ar *,
+.join-panel *,
+.toast-stack * {
+  color: inherit !important;
+}
+
+/* ── 1. 顶栏 ──────────────────────────────────────────────────────── */
+
+.topbar {
+  background: rgba(244, 243, 240, 0.94) !important;
+  border-bottom: 1px solid var(--m-hair) !important;
+}
+
+.brand-mark {
+  background: var(--m-ink) !important;
+  color: #fff !important;
+  border-radius: 11px !important;
+  box-shadow: none !important;
+}
+
+.brand-mark .ic,
+.brand-mark svg {
+  color: #fff !important;
+  stroke: currentColor;
+}
+
+.brand-title {
+  background: none !important;
+  color: var(--m-ink) !important;
+  -webkit-text-fill-color: var(--m-ink) !important;
+  background-clip: border-box !important;
+  -webkit-background-clip: border-box !important;
+  font-size: 18px !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.16em;
+}
+
+.brand-sub {
+  color: var(--m-ink-3) !important;
+  font-size: 9.5px !important;
+  letter-spacing: 0.1em;
+}
+
+.conn {
+  background: transparent !important;
+  border: 1px solid var(--m-hair-2) !important;
+  color: var(--m-ink) !important;
+  border-radius: 999px !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+}
+
+.conn-dot {
+  background: var(--m-ink) !important;
+  box-shadow: none !important;
+}
+
+.conn[data-mode="demo"] .conn-dot,
+.conn[data-mode="connecting"] .conn-dot,
+.conn[data-mode="reconnecting"] .conn-dot {
+  background: transparent !important;
+  box-shadow: inset 0 0 0 1.5px var(--m-ink) !important;
+}
+
+.icon-btn {
+  background: var(--m-card) !important;
+  border: 1px solid var(--m-hair) !important;
+  color: var(--m-ink) !important;
+  border-radius: 12px !important;
+}
+
+.icon-btn:active {
+  background: var(--m-ink) !important;
+  color: #fff !important;
+}
+
+.unread-badge {
+  background: var(--m-ink) !important;
+  color: #fff !important;
+  border: 2px solid var(--m-paper) !important;
+  border-radius: 999px !important;
+  font-size: 9px !important;
+  font-weight: 700 !important;
+}
+
+/* ── 2. 通用排版 ──────────────────────────────────────────────────── */
+
+.hero-kicker,
+.panel-kicker,
+.join-kicker,
+.ov-kicker {
+  color: var(--m-ink-3) !important;
+  font-size: 10px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.18em !important;
+  text-transform: uppercase;
+}
+
+.hero-title,
+.panel-title,
+.models-title,
+.join-title,
+.ov-title {
+  color: var(--m-ink) !important;
+  letter-spacing: -0.015em;
+}
+
+.hero-copy,
+.panel-sub,
+.models-sub,
+.join-sub,
+.ov-sub,
+.join-hint,
+.ar-hint {
+  color: var(--m-ink-2) !important;
+}
+
+.sec-title,
+.section-title,
+.join-step-title {
+  color: var(--m-ink) !important;
+  font-size: 12.5px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.02em;
+}
+
+.sec-title::before,
+.section-title::before {
+  background: var(--m-ink) !important;
+  box-shadow: none !important;
+}
+
+/* ── 3. 预警页 ────────────────────────────────────────────────────── */
+
+.hero-card {
+  background: var(--m-card) !important;
+  border: 1px solid var(--m-hair) !important;
+  border-radius: 20px !important;
+}
+
+.hero-chip {
+  background: transparent !important;
+  border: 1px solid var(--m-hair-2) !important;
+  color: var(--m-ink) !important;
+  border-radius: 999px !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+}
+
+.scene-bar {
+  background: var(--m-paper) !important;
+  border: 1px solid var(--m-hair) !important;
+  border-radius: 12px !important;
+  color: var(--m-ink) !important;
+}
+
+.scene-dot {
+  background: var(--m-ink) !important;
+  box-shadow: none !important;
+}
+
+.scene-text {
+  color: var(--m-ink) !important;
+  font-weight: 600 !important;
+}
+
+.scene-main {
+  color: var(--m-ink) !important;
+}
+
+.scene-meta {
+  color: var(--m-ink-3) !important;
+  font-size: 11px !important;
+  font-variant-numeric: tabular-nums;
+}
+
+.stat {
+  background: var(--m-card) !important;
+  border: 1px solid var(--m-hair) !important;
+  border-radius: 14px !important;
+  --stat-color: var(--m-ink) !important;
+  --stat-glow: transparent !important;
+}
+
+.stat[data-tone="danger"],
+.stat[data-tone="warn"],
+.stat[data-tone="ok"],
+.stat[data-tone="info"] {
+  --stat-color: var(--m-ink) !important;
+  --stat-glow: transparent !important;
+}
+
+.stat::after {
+  display: none !important;
+}
+
+.stat-label::before {
+  background: var(--m-ink) !important;
+  opacity: 0.38 !important;
+}
+
+.stat-num {
+  color: var(--m-ink) !important;
+  font-size: 27px !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.stat-label {
+  color: var(--m-ink-3) !important;
+  font-size: 11px !important;
+}
+
+.filters {
+  background: var(--m-card) !important;
+  border: 1px solid var(--m-hair) !important;
+  border-radius: 999px !important;
+}
+
+.filter {
+  background: transparent !important;
+  border: 0 !important;
+  color: var(--m-ink-2) !important;
+  border-radius: 999px !important;
+  font-size: 12.5px !important;
+  font-weight: 600 !important;
+}
+
+.filter.is-active {
+  background: var(--m-ink) !important;
+  color: #fff !important;
+}
+
+.filter-count {
+  background: rgba(17, 17, 16, 0.08) !important;
+  color: inherit !important;
+  border-radius: 999px !important;
+  font-size: 10.5px !important;
+  font-variant-numeric: tabular-nums;
+}
+
+.filter.is-active .filter-count {
+  background: rgba(255, 255, 255, 0.24) !important;
+  color: #fff !important;
+}
+
+/* 预警卡片 */
+
+.card {
+  background: var(--m-card) !important;
+  border: 1px solid var(--m-hair) !important;
+  border-radius: 16px !important;
+  box-shadow: none !important;
+}
+
+.card.is-resolved {
+  border-color: var(--m-hair) !important;
+}
+
+.card.is-latest {
+  border-color: var(--m-ink) !important;
+}
+
+.feed-live {
+  color: var(--m-ink-3) !important;
+}
+
+.feed-live i,
+.battle-live i {
+  background: var(--m-ink) !important;
+  box-shadow: none !important;
+}
+
+.card-unread {
+  background: var(--m-ink) !important;
+  box-shadow: none !important;
+}
+
+.card-icon {
+  background: var(--m-paper) !important;
+  border: 1px solid var(--m-hair) !important;
+  color: var(--m-ink) !important;
+  border-radius: 12px !important;
+}
+
+.card-area {
+  color: var(--m-ink) !important;
+  font-size: 15px !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.01em;
+}
+
+.card-model-name {
+  color: var(--m-ink) !important;
+  font-weight: 600 !important;
+}
+
+.card-model-conf,
+.card-meta {
+  color: var(--m-ink-3) !important;
+  font-variant-numeric: tabular-nums;
+}
+
+.card-statusline {
+  color: var(--m-ink-2) !important;
+}
+
+.card-visitor {
+  background: var(--m-ink) !important;
+  color: #fff !important;
+  border: 0 !important;
+  border-radius: 999px !important;
+  font-size: 10px !important;
+  font-weight: 600 !important;
+}
+
+.card-visitor svg {
+  color: #fff !important;
+}
+
+.pill {
+  background: var(--m-paper) !important;
+  border: 1px solid var(--m-hair-2) !important;
+  color: var(--m-ink) !important;
+  border-radius: 999px !important;
+  font-size: 10.5px !important;
+  font-weight: 600 !important;
+}
+
+.pill.tone-ok,
+.pill.tone-warn,
+.pill.tone-info,
+.pill.tone-danger {
+  background: var(--m-ink) !important;
+  border-color: var(--m-ink) !important;
+  color: #fff !important;
+}
+
+/* 五段处置进度 */
+
+.steps i,
+.step i {
+  background: rgba(17, 17, 16, 0.1) !important;
+  border-radius: 999px !important;
+}
+
+.step.is-done i {
+  background: var(--m-ink) !important;
+}
+
+.step em {
+  color: var(--m-ink-3) !important;
+  font-size: 10px !important;
+}
+
+.step.is-done em {
+  color: var(--m-ink) !important;
+}
+
+/* 空态 / 骨架 / 待受理 */
+
+.empty {
+  background: transparent !important;
+  border: 1px dashed var(--m-hair-2) !important;
+  border-radius: 16px !important;
+}
+
+.empty-art {
+  color: var(--m-ink-3) !important;
+  opacity: 0.55;
+}
+
+.empty-art svg {
+  stroke: currentColor;
+}
+
+.empty-title {
+  color: var(--m-ink) !important;
+  font-weight: 700 !important;
+}
+
+.empty-sub {
+  color: var(--m-ink-3) !important;
+}
+
+.empty-join {
+  background: var(--m-card) !important;
+  border: 1px solid var(--m-ink) !important;
+  color: var(--m-ink) !important;
+  border-radius: 999px !important;
+  font-weight: 600 !important;
+}
+
+.skel-card,
+.skel-icon,
+.skel-line {
+  background: rgba(17, 17, 16, 0.07) !important;
+  border: 0 !important;
+}
+
+.visitor-pending {
+  background: var(--m-paper) !important;
+  border: 1px dashed var(--m-hair-2) !important;
+  color: var(--m-ink-2) !important;
+  border-radius: 12px !important;
+}
+
+.visitor-pending-dot {
+  background: var(--m-ink) !important;
+}
+
+/* 底部参与条 */
+
+.footer,
+.join-bar {
+  background: rgba(244, 243, 240, 0.96) !important;
+  border-top: 1px solid var(--m-hair) !important;
+}
+
+.join-cta {
+  background: var(--m-ink) !important;
+  border: 0 !important;
+  color: #fff !important;
+  border-radius: 14px !important;
+  box-shadow: none !important;
+}
+
+.join-cta * {
+  color: #fff !important;
+}
+
+.join-cta-icon {
+  background: rgba(255, 255, 255, 0.14) !important;
+  color: #fff !important;
+  border-radius: 10px !important;
+}
+
+.join-cta-copy strong {
+  font-size: 14px !important;
+  font-weight: 700 !important;
+}
+
+.join-cta-copy span {
+  color: rgba(255, 255, 255, 0.66) !important;
+  font-size: 11px !important;
+}
+
+/* ── 4. 模型页 ────────────────────────────────────────────────────── */
+
+.mt-card {
+  background: var(--m-card) !important;
+  border: 1px solid var(--m-hair) !important;
+  border-radius: 16px !important;
+}
+
+.mt-card.is-current {
+  border-color: var(--m-ink) !important;
+}
+
+.mt-dot {
+  background: var(--m-ink) !important;
+  box-shadow: none !important;
+}
+
+.mt-name {
+  color: var(--m-ink) !important;
+  font-size: 15px !important;
+  font-weight: 700 !important;
+}
+
+.mt-badge {
+  background: var(--m-ink) !important;
+  color: #fff !important;
+  border: 0 !important;
+  border-radius: 999px !important;
+  font-size: 10px !important;
+  font-weight: 600 !important;
+}
+
+.mt-tagline {
+  color: var(--m-ink-2) !important;
+}
+
+.mt-metrics span {
+  color: var(--m-ink-3) !important;
+  font-size: 10.5px !important;
+}
+
+.mt-today,
+.mt-scene {
+  color: var(--m-ink) !important;
+  font-weight: 700 !important;
+  font-variant-numeric: tabular-nums;
+}
+
+.mt-caps span {
+  background: var(--m-paper) !important;
+  border: 1px solid var(--m-hair) !important;
+  color: var(--m-ink-2) !important;
+  border-radius: 999px !important;
+  font-size: 11px !important;
+}
+
+.chain-list-item {
+  border-bottom: 1px solid var(--m-hair) !important;
+}
+
+.chain-list-idx {
+  color: var(--m-ink-3) !important;
+  font-family: var(--m-mono);
+  font-size: 11px !important;
+}
+
+.chain-list-body strong {
+  color: var(--m-ink) !important;
+  font-weight: 600 !important;
+}
+
+.chain-list-body p {
+  color: var(--m-ink-3) !important;
+}
+
+.ghost-btn {
+  background: transparent !important;
+  border: 1px solid var(--m-hair-2) !important;
+  color: var(--m-ink) !important;
+  border-radius: 999px !important;
+  font-weight: 600 !important;
+}
+
+/* ── 5. 参与页 ────────────────────────────────────────────────────── */
+
+.entry-card {
+  background: var(--m-card) !important;
+  border: 1px solid var(--m-hair) !important;
+  border-radius: 16px !important;
+  box-shadow: none !important;
+}
+
+.entry-card:active {
+  border-color: var(--m-ink) !important;
+}
+
+.entry-icon {
+  background: var(--m-paper) !important;
+  border: 1px solid var(--m-hair) !important;
+  color: var(--m-ink) !important;
+  border-radius: 13px !important;
+}
+
+.entry-copy {
+  min-width: 0;
+  padding-right: 16px;
+}
+
+.entry-copy b {
+  color: var(--m-ink) !important;
+  font-size: 14px !important;
+  font-weight: 700 !important;
+}
+
+.entry-copy small {
+  color: var(--m-ink-3) !important;
+  font-size: 10px !important;
+}
+
+.entry-arrow {
+  color: var(--m-ink-3) !important;
+}
+
+.battle-card {
+  background: var(--m-card) !important;
+  border: 1px solid var(--m-hair) !important;
+  border-radius: 18px !important;
+}
+
+.battle-live {
+  color: var(--m-ink-3) !important;
+  font-family: var(--m-mono);
+  font-size: 10px !important;
+  letter-spacing: 0.12em;
+}
+
+.battle-live i {
+  background: var(--m-ink) !important;
+  box-shadow: none !important;
+}
+
+.battle-grid div {
+  background: var(--m-paper) !important;
+  border: 1px solid var(--m-hair) !important;
+  border-radius: 12px !important;
+}
+
+.battle-grid b {
+  color: var(--m-ink) !important;
+  font-size: 22px !important;
+  font-weight: 700 !important;
+  font-variant-numeric: tabular-nums;
+}
+
+.battle-grid span {
+  color: var(--m-ink-3) !important;
+  font-size: 10.5px !important;
+}
+
+.battle-bar-row > span:first-child {
+  color: var(--m-ink-2) !important;
+}
+
+.battle-bar {
+  background: rgba(17, 17, 16, 0.08) !important;
+  border-radius: 999px !important;
+}
+
+.battle-bar i {
+  background: var(--m-ink) !important;
+  box-shadow: none !important;
+}
+
+.battle-bar-row b {
+  color: var(--m-ink) !important;
+  font-variant-numeric: tabular-nums;
+}
+
+.battle-scene-chip {
+  background: var(--m-paper) !important;
+  border: 1px dashed var(--m-hair-2) !important;
+  color: var(--m-ink-2) !important;
+  border-radius: 999px !important;
+  font-size: 11px !important;
+}
+
+.voice-cmd-card {
+  background: var(--m-paper) !important;
+  border: 1px dashed var(--m-hair-2) !important;
+  border-radius: 16px !important;
+  color: var(--m-ink) !important;
+}
+
+.voice-cmd-icon {
+  background: var(--m-ink) !important;
+  color: #fff !important;
+  border-radius: 11px !important;
+}
+
+.voice-cmd-card b,
+.voice-cmd-card strong {
+  color: var(--m-ink) !important;
+}
+
+.voice-cmd-card small,
+.voice-cmd-card span {
+  color: var(--m-ink-3) !important;
+}
+
+/* 等级条 */
+
+.level-mini,
+.level-card {
+  background: var(--m-card) !important;
+  border: 1px solid var(--m-hair) !important;
+  border-radius: 16px !important;
+}
+
+.level-badge {
+  background: var(--m-ink) !important;
+  border: 0 !important;
+  color: #fff !important;
+  border-radius: 999px !important;
+  font-size: 10.5px !important;
+  font-weight: 700 !important;
+}
+
+.level-score,
+.level-score b {
+  color: var(--m-ink) !important;
+  font-variant-numeric: tabular-nums;
+}
+
+.level-bar {
+  background: rgba(17, 17, 16, 0.09) !important;
+  border-radius: 999px !important;
+}
+
+.level-bar i {
+  background: var(--m-ink) !important;
+  border-radius: 999px !important;
+}
+
+.level-next,
+.level-next span {
+  color: var(--m-ink-3) !important;
+  font-size: 10.5px !important;
+}
+
+/* ── 6. 我的 ──────────────────────────────────────────────────────── */
+
+.me-card {
+  background: var(--m-card) !important;
+  border: 1px solid var(--m-hair) !important;
+  border-radius: 18px !important;
+}
+
+.me-avatar {
+  background: var(--m-ink) !important;
+  color: #fff !important;
+  border-radius: 14px !important;
+  font-weight: 700 !important;
+}
+
+.me-name {
+  background: transparent !important;
+  border: 0 !important;
+  border-bottom: 1px solid transparent !important;
+  color: var(--m-ink) !important;
+  font-size: 16px !important;
+  font-weight: 700 !important;
+}
+
+.me-name:focus {
+  border-bottom-color: var(--m-ink) !important;
+  outline: none;
+}
+
+.me-role {
+  background: var(--m-paper) !important;
+  border: 1px solid var(--m-hair-2) !important;
+  color: var(--m-ink-2) !important;
+  border-radius: 999px !important;
+  font-size: 10px !important;
+}
+
+.me-score,
+.me-score b {
+  color: var(--m-ink) !important;
+  font-variant-numeric: tabular-nums;
+}
+
+.me-score span {
+  color: var(--m-ink-3) !important;
+}
+
+.role-grid {
+  background: var(--m-card) !important;
+  border: 1px solid var(--m-hair) !important;
+  border-radius: 16px !important;
+}
+
+.role-btn {
+  background: var(--m-paper) !important;
+  border: 1px solid var(--m-hair) !important;
+  color: var(--m-ink-2) !important;
+  border-radius: 12px !important;
+  font-weight: 600 !important;
+}
+
+.role-btn.is-active {
+  background: var(--m-ink) !important;
+  border-color: var(--m-ink) !important;
+  color: #fff !important;
+}
+
+.me-section {
+  background: var(--m-card) !important;
+  border: 1px solid var(--m-hair) !important;
+  border-radius: 16px !important;
+}
+
+.me-counters div {
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  min-width: 0;
+}
+
+.me-counters div + div {
+  border-left: 1px solid var(--m-hair) !important;
+  padding-left: 11px !important;
+}
+
+.me-counters b {
+  color: var(--m-ink) !important;
+  font-weight: 700 !important;
+  font-variant-numeric: tabular-nums;
+}
+
+.me-counters span {
+  color: var(--m-ink-3) !important;
+  font-size: 10.5px !important;
+}
+
+.me-online {
+  color: var(--m-ink-3) !important;
+  font-size: 11px !important;
+}
+
+.me-board-row {
+  background: var(--m-card) !important;
+  border: 1px solid var(--m-hair) !important;
+  border-radius: 12px !important;
+}
+
+.me-board-row .rank {
+  background: var(--m-paper) !important;
+  border: 1px solid var(--m-hair) !important;
+  color: var(--m-ink) !important;
+  border-radius: 999px !important;
+  font-family: var(--m-mono);
+  font-size: 11px !important;
+}
+
+.me-board-row:first-child .rank {
+  background: var(--m-ink) !important;
+  border-color: var(--m-ink) !important;
+  color: #fff !important;
+}
+
+.me-board-row .who b {
+  color: var(--m-ink) !important;
+  font-weight: 600 !important;
+}
+
+.me-board-row .who small {
+  color: var(--m-ink-3) !important;
+}
+
+.me-board-row .pts {
+  color: var(--m-ink) !important;
+  font-variant-numeric: tabular-nums;
+}
+
+.me-settings {
+  background: var(--m-card) !important;
+  border: 1px solid var(--m-hair) !important;
+  border-radius: 16px !important;
+  overflow: hidden;
+}
+
+.me-row {
+  background: transparent !important;
+  border: 0 !important;
+  border-bottom: 1px solid var(--m-hair) !important;
+  color: var(--m-ink) !important;
+}
+
+.me-row:last-child {
+  border-bottom: 0 !important;
+}
+
+.me-row b {
+  color: var(--m-ink-2) !important;
+  font-weight: 600 !important;
+}
+
+.me-row.is-danger span,
+.me-row.is-danger b {
+  color: var(--m-ink) !important;
+}
+
+/* ── 7. 底部导航 ──────────────────────────────────────────────────── */
+
+.tabbar {
+  background: rgba(255, 255, 255, 0.96) !important;
+  border-top: 1px solid var(--m-hair) !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+.tab {
+  background: transparent !important;
+  color: var(--m-ink-3) !important;
+  border: 0 !important;
+}
+
+.tab .tab-icon {
+  color: var(--m-ink-3) !important;
+  border-radius: 9px !important;
+  transition: background 160ms ease, color 160ms ease;
+}
+
+.tab .tab-label {
+  color: var(--m-ink-3) !important;
+  font-size: 10px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.04em;
+}
+
+.tab.is-active .tab-icon {
+  background: var(--m-ink) !important;
+  color: #fff !important;
+}
+
+.tab.is-active .tab-label {
+  color: var(--m-ink) !important;
+}
+
+.tab.is-active .ic {
+  color: #fff !important;
+}
+
+.tab-dot {
+  background: var(--m-ink) !important;
+  color: #fff !important;
+  border: 2px solid var(--m-card) !important;
+  border-radius: 999px !important;
+  font-size: 8px !important;
+  font-style: normal !important;
+}
+
+/* ── 8. 吐司 ──────────────────────────────────────────────────────── */
+
+.toast {
+  background: var(--m-ink) !important;
+  border: 0 !important;
+  color: #fff !important;
+  border-radius: 12px !important;
+  box-shadow: none !important;
+}
+
+.toast * {
+  color: #fff !important;
+}
+
+.toast.is-visitor {
+  background: var(--m-card) !important;
+  border: 1px solid var(--m-ink) !important;
+  color: var(--m-ink) !important;
+}
+
+.toast.is-visitor * {
+  color: var(--m-ink) !important;
+}
+
+.banner-slot {
+  background: var(--m-card) !important;
+  border: 1px solid var(--m-hair) !important;
+  border-radius: 14px !important;
+}
+
+.banner-text {
+  color: var(--m-ink) !important;
+}
+
+.banner-btn {
+  background: var(--m-ink) !important;
+  color: #fff !important;
+  border-radius: 999px !important;
+}
+
+/* ── 9. 底部抽屉：预警详情 ────────────────────────────────────────── */
+
+.sheet,
+.sheet-backdrop,
+.models-backdrop,
+.quiz-backdrop,
+.voice-backdrop,
+.ar-backdrop,
+.join-backdrop {
+  background: rgba(10, 10, 9, 0.4) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+.sheet-panel {
+  background: var(--m-card) !important;
+  border: 1px solid var(--m-hair) !important;
+  border-radius: 22px 22px 0 0 !important;
+  box-shadow: 0 -1px 0 var(--m-hair) !important;
+  color: var(--m-ink) !important;
+}
+
+.sheet-grip span {
+  background: rgba(17, 17, 16, 0.18) !important;
+}
+
+.sheet-head {
+  border-bottom: 1px solid var(--m-hair) !important;
+}
+
+.sheet-icon {
+  background: var(--m-paper) !important;
+  border: 1px solid var(--m-hair) !important;
+  color: var(--m-ink) !important;
+  border-radius: 12px !important;
+}
+
+.sheet-title {
+  color: var(--m-ink) !important;
+  font-weight: 700 !important;
+}
+
+.sheet-sub {
+  color: var(--m-ink-3) !important;
+}
+
+.sheet-body {
+  background: var(--m-card) !important;
+}
+
+.sheet-sec,
+.sheet-live,
+.analysis-card,
+.timeline-wrap {
+  background: var(--m-paper) !important;
+  border: 1px solid var(--m-hair) !important;
+  border-radius: 14px !important;
+}
+
+.sheet-visitor {
+  background: var(--m-paper) !important;
+  border: 1px dashed var(--m-hair-2) !important;
+  color: var(--m-ink-2) !important;
+  border-radius: 12px !important;
+}
+
+.sheet-live-head {
+  color: var(--m-ink-2) !important;
+}
+
+.sheet-live-dot {
+  background: var(--m-ink) !important;
+  box-shadow: none !important;
+}
+
+.sheet-live-frame {
+  background: #111110 !important;
+  border: 0 !important;
+  border-radius: 10px !important;
+}
+
+.sheet-live-frame img {
+  /* 现场画面保持彩色，黑白只做在 UI 上 */
+  filter: none !important;
+}
+
+.sheet-live-empty,
+.sheet-live-meta {
+  color: var(--m-ink-3) !important;
+}
+
+.info-cell {
+  background: var(--m-paper) !important;
+  border: 1px solid var(--m-hair) !important;
+  border-radius: 11px !important;
+}
+
+.info-label {
+  color: var(--m-ink-3) !important;
+  font-size: 10px !important;
+}
+
+.info-value {
+  color: var(--m-ink) !important;
+  font-weight: 600 !important;
+}
+
+.model-chip {
+  background: var(--m-paper) !important;
+  border: 1px solid var(--m-hair) !important;
+  border-radius: 11px !important;
+}
+
+.model-chip.is-on {
+  border-color: var(--m-ink) !important;
+}
+
+.model-chip-dot {
+  background: var(--m-ink) !important;
+  box-shadow: none !important;
+}
+
+.model-chip-name {
+  color: var(--m-ink) !important;
+  font-weight: 600 !important;
+}
+
+.model-chip-tag {
+  color: var(--m-ink-3) !important;
+}
+
+.chain-step {
+  border-bottom: 1px solid var(--m-hair) !important;
+}
+
+.chain-step .idx {
+  background: var(--m-ink) !important;
+  color: #fff !important;
+}
+
+.analysis-label {
+  color: var(--m-ink-3) !important;
+}
+
+.analysis-conf {
+  color: var(--m-ink) !important;
+  font-family: var(--m-mono);
+  font-weight: 700 !important;
+}
+
+.analysis-bar {
+  background: rgba(17, 17, 16, 0.09) !important;
+  border-radius: 999px !important;
+}
+
+.analysis-bar i {
+  background: var(--m-ink) !important;
+  border-radius: 999px !important;
+}
+
+.analysis-row {
+  border-bottom: 1px solid var(--m-hair) !important;
+}
+
+.analysis-key {
+  color: var(--m-ink-3) !important;
+}
+
+.analysis-text {
+  color: var(--m-ink-2) !important;
+}
+
+.timeline::before {
+  background: var(--m-hair) !important;
+}
+
+.tl-head {
+  background: var(--m-ink) !important;
+  box-shadow: none !important;
+}
+
+.tl-time {
+  color: var(--m-ink-3) !important;
+  font-family: var(--m-mono);
+  font-size: 10.5px !important;
+}
+
+.tl-label {
+  color: var(--m-ink) !important;
+  font-weight: 600 !important;
+}
+
+.tl-text {
+  color: var(--m-ink-2) !important;
+}
+
+.tl-empty {
+  color: var(--m-ink-3) !important;
+}
+
+.sheet-foot {
+  background: var(--m-card) !important;
+  border-top: 1px solid var(--m-hair) !important;
+}
+
+.btn-close {
+  background: var(--m-ink) !important;
+  border: 0 !important;
+  color: #fff !important;
+  border-radius: 12px !important;
+  font-weight: 600 !important;
+}
+
+/* ── 10. 四大模型总览浮层 ─────────────────────────────────────────── */
+
+.models-panel {
+  background: var(--m-paper) !important;
+  color: var(--m-ink) !important;
+}
+
+.models-head {
+  background: var(--m-paper) !important;
+  border-bottom: 1px solid var(--m-hair) !important;
+}
+
+.models-note {
+  color: var(--m-ink-3) !important;
+}
+
+/* ── 11. 盲盒 / 语音 / AR / 拍照上报 四个浮层 ─────────────────────── */
+
+.quiz-panel,
+.voice-panel,
+.ar-panel,
+.join-panel {
+  background: var(--m-paper) !important;
+  color: var(--m-ink) !important;
+}
+
+.ov-head {
+  background: transparent !important;
+}
+
+.quiz-top,
+.quiz-scorebar {
+  color: var(--m-ink-3) !important;
+}
+
+.quiz-step {
+  color: var(--m-ink-3) !important;
+  font-family: var(--m-mono);
+  font-size: 11px !important;
+}
+
+.quiz-scorebar b {
+  color: var(--m-ink) !important;
+  font-variant-numeric: tabular-nums;
+}
+
+.quiz-image {
+  background: #d9d8d3 !important;
+  border: 1px solid var(--m-hair) !important;
+  border-radius: 14px !important;
+  filter: none !important;
+}
+
+.quiz-question {
+  color: var(--m-ink) !important;
+  font-weight: 700 !important;
+}
+
+.quiz-option {
+  background: var(--m-card) !important;
+  border: 1px solid var(--m-hair) !important;
+  color: var(--m-ink) !important;
+  border-radius: 12px !important;
+  font-weight: 600 !important;
+}
+
+.quiz-option.is-correct {
+  background: var(--m-ink) !important;
+  border-color: var(--m-ink) !important;
+  color: #fff !important;
+}
+
+.quiz-option.is-wrong {
+  background: var(--m-paper) !important;
+  border-color: var(--m-hair-2) !important;
+  border-style: dashed !important;
+  color: var(--m-ink-3) !important;
+  text-decoration: line-through;
+}
+
+.quiz-reveal,
+.quiz-status {
+  color: var(--m-ink-2) !important;
+}
+
+.quiz-result {
+  background: var(--m-card) !important;
+  border: 1px solid var(--m-ink) !important;
+  border-radius: 16px !important;
+}
+
+.quiz-result h3 {
+  color: var(--m-ink) !important;
+  font-weight: 700 !important;
+}
+
+.quiz-result p,
+.quiz-result b {
+  color: var(--m-ink-2) !important;
+}
+
+.quiz-rank {
+  background: var(--m-ink) !important;
+  border: 0 !important;
+  color: #fff !important;
+  border-radius: 999px !important;
+  font-weight: 600 !important;
+}
+
+.quiz-replay {
+  background: transparent !important;
+  border: 1px solid var(--m-hair-2) !important;
+  color: var(--m-ink) !important;
+  border-radius: 999px !important;
+  font-weight: 600 !important;
+}
+
+.voice-orb {
+  background: var(--m-card) !important;
+  border: 1px solid var(--m-hair-2) !important;
+  color: var(--m-ink) !important;
+  box-shadow: none !important;
+}
+
+.voice-hold {
+  background: var(--m-ink) !important;
+  border: 0 !important;
+  color: #fff !important;
+  border-radius: 999px !important;
+  font-weight: 700 !important;
+}
+
+.voice-hint {
+  color: var(--m-ink-3) !important;
+}
+
+.voice-transcript {
+  background: var(--m-paper) !important;
+  border: 1px solid var(--m-hair) !important;
+  color: var(--m-ink-2) !important;
+  border-radius: 12px !important;
+}
+
+.voice-wave i {
+  background: var(--m-ink) !important;
+}
+
+.voice-result {
+  background: var(--m-card) !important;
+  border: 1px solid var(--m-hair) !important;
+  border-radius: 14px !important;
+}
+
+.voice-result-kind {
+  color: var(--m-ink) !important;
+  font-weight: 700 !important;
+}
+
+.voice-result-conf {
+  color: var(--m-ink-3) !important;
+  font-family: var(--m-mono);
+}
+
+.voice-result-rows dt {
+  color: var(--m-ink-3) !important;
+}
+
+.voice-result-rows dd {
+  color: var(--m-ink) !important;
+}
+
+.voice-status {
+  color: var(--m-ink-3) !important;
+}
+
+.voice-submit,
+.ar-submit,
+.join-submit {
+  background: var(--m-ink) !important;
+  border: 0 !important;
+  color: #fff !important;
+  border-radius: 13px !important;
+  font-weight: 700 !important;
+}
+
+.voice-submit svg,
+.ar-submit svg,
+.join-submit svg {
+  color: #fff !important;
+}
+
+.voice-submit:disabled,
+.ar-submit:disabled,
+.join-submit:disabled {
+  background: rgba(17, 17, 16, 0.28) !important;
+  color: #fff !important;
+}
+
+.ar-view {
+  background: #111110 !important;
+  border: 1px solid var(--m-hair) !important;
+  border-radius: 16px !important;
+}
+
+.ar-grid {
+  background-image: linear-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.08) 1px, transparent 1px) !important;
+  background-size: 28px 28px !important;
+}
+
+.ar-frame {
+  border-color: rgba(255, 255, 255, 0.55) !important;
+}
+
+.ar-marker {
+  background: rgba(255, 255, 255, 0.9) !important;
+  border: 1px solid rgba(17, 17, 16, 0.2) !important;
+  color: var(--m-ink) !important;
+  border-radius: 999px !important;
+  font-weight: 600 !important;
+}
+
+.ar-scan i {
+  border-color: rgba(255, 255, 255, 0.7) transparent transparent transparent !important;
+}
+
+.ar-scan span {
+  color: rgba(255, 255, 255, 0.75) !important;
+}
+
+.ar-result {
+  background: var(--m-card) !important;
+  border: 1px solid var(--m-hair) !important;
+  border-radius: 14px !important;
+}
+
+.ar-result-text,
+.ar-status {
+  color: var(--m-ink-2) !important;
+}
+
+.ar-rescan {
+  background: transparent !important;
+  border: 1px solid var(--m-hair-2) !important;
+  color: var(--m-ink) !important;
+  border-radius: 999px !important;
+}
+
+.ar-hint {
+  color: var(--m-ink-3) !important;
+}
+
+/* 拍照上报浮层 */
+
+.join-head {
+  background: var(--m-paper) !important;
+}
+
+.join-step-num {
+  background: var(--m-ink) !important;
+  border: 0 !important;
+  color: #fff !important;
+  border-radius: 999px !important;
+  font-weight: 700 !important;
+}
+
+.join-scene {
+  background: var(--m-card) !important;
+  border: 1px solid var(--m-hair) !important;
+  color: var(--m-ink-2) !important;
+  border-radius: 999px !important;
+  font-weight: 600 !important;
+}
+
+.join-scene.is-on {
+  background: var(--m-ink) !important;
+  border-color: var(--m-ink) !important;
+  color: #fff !important;
+}
+
+.join-photo-wrap {
+  background: var(--m-paper) !important;
+  border: 1px dashed var(--m-hair-2) !important;
+  border-radius: 14px !important;
+}
+
+.join-photo-empty,
+.join-photo-empty p {
+  color: var(--m-ink-3) !important;
+}
+
+.join-preview {
+  filter: none !important;
+}
+
+.join-box {
+  border-color: rgba(255, 255, 255, 0.85) !important;
+}
+
+.join-box i {
+  background: rgba(255, 255, 255, 0.85) !important;
+}
+
+.join-box em {
+  background: rgba(17, 17, 16, 0.75) !important;
+  color: #fff !important;
+}
+
+.join-scan i {
+  background: rgba(255, 255, 255, 0.9) !important;
+}
+
+.join-photo-btn {
+  background: var(--m-card) !important;
+  border: 1px solid var(--m-hair-2) !important;
+  color: var(--m-ink) !important;
+  border-radius: 999px !important;
+  font-weight: 600 !important;
+}
+
+.join-photo-btn.is-ghost {
+  background: transparent !important;
+  color: var(--m-ink-2) !important;
+}
+
+.join-analyze {
+  background: var(--m-card) !important;
+  border: 1px solid var(--m-ink) !important;
+  color: var(--m-ink) !important;
+  border-radius: 13px !important;
+  font-weight: 600 !important;
+}
+
+.join-model-row {
+  background: var(--m-paper) !important;
+  border: 1px solid var(--m-hair) !important;
+  border-radius: 11px !important;
+}
+
+.join-result {
+  background: var(--m-card) !important;
+  border: 1px solid var(--m-ink) !important;
+  border-radius: 14px !important;
+}
+
+.join-result-caption {
+  color: var(--m-ink-3) !important;
+}
+
+.join-result-kind {
+  color: var(--m-ink) !important;
+  font-weight: 700 !important;
+}
+
+.join-result-conf {
+  color: var(--m-ink-2) !important;
+  font-family: var(--m-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.join-result-row dt,
+.join-result-key {
+  color: var(--m-ink-3) !important;
+}
+
+.join-result-row dd,
+.join-result-text {
+  color: var(--m-ink) !important;
+}
+
+.join-status {
+  color: var(--m-ink-3) !important;
+}
+
+/* 骨架屏的流光动画在白底上不必要，直接停掉 */
+.skeleton *,
+.shimmer,
+.empty-sweep {
+  animation: none !important;
+  background-image: none !important;
+}
+
+/* ══ 第二轮收口：把浮层里漏掉的彩色点逐个按死 ══════════════════════ */
+
+/* 焦点环（打开浮层会自动聚焦关闭键）别再用 2px 实黑描边 */
+:focus-visible {
+  outline: 2px solid rgba(17, 17, 16, 0.28) !important;
+  outline-offset: 2px;
+}
+
+/* 模型总览 · 四张场景卡：原来是深底 + 彩色描边 + 彩点，全部改白卡黑线 */
+.models-panel .model-card {
+  background: var(--m-card) !important;
+  border: 1px solid var(--m-hair) !important;
+  border-radius: 13px !important;
+}
+
+.models-panel .model-card::before {
+  display: none !important;
+}
+
+.models-panel .model-card.is-current {
+  border-color: var(--m-ink) !important;
+  box-shadow: none !important;
+  background: var(--m-card) !important;
+}
+
+.models-panel .model-card-dot {
+  background: var(--m-ink) !important;
+  box-shadow: none !important;
+  opacity: 0.5;
+}
+
+.models-panel .model-card.is-current .model-card-dot {
+  opacity: 1;
+}
+
+.models-panel .model-card-name {
+  color: var(--m-ink) !important;
+  font-size: 12.5px !important;
+  font-weight: 700 !important;
+}
+
+.models-panel .model-card-current {
+  background: var(--m-ink) !important;
+  color: #fff !important;
+  border-radius: 4px !important;
+  font-size: 8.5px !important;
+  letter-spacing: 0.06em !important;
+}
+
+.models-panel .model-card-tagline {
+  color: var(--m-ink-2) !important;
+}
+
+.models-panel .model-card-coverage,
+.models-panel .model-card-caps li {
+  color: var(--m-ink-3) !important;
+}
+
+.models-panel .model-card-caps li::before {
+  background: var(--m-ink) !important;
+  opacity: 0.4 !important;
+}
+
+.models-panel .model-card-demo {
+  background: var(--m-paper) !important;
+  border-radius: 8px !important;
+}
+
+.models-panel .model-demo-label {
+  color: var(--m-ink-3) !important;
+}
+
+.models-panel .model-demo-list {
+  color: var(--m-ink-2) !important;
+}
+
+.models-panel .model-today {
+  color: var(--m-ink-3) !important;
+}
+
+.models-panel .model-today-num {
+  color: var(--m-ink) !important;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 预警详情 · 「主判」徽标原来是青底灰字 */
+.model-chip-tag {
+  background: var(--m-ink) !important;
+  color: #fff !important;
+  font-size: 8.5px !important;
+  letter-spacing: 0.04em !important;
+}
+
+.model-chip-dot {
+  background: var(--m-ink) !important;
+  box-shadow: none !important;
+  opacity: 0.55;
+}
+
+.model-chip.is-main .model-chip-dot {
+  opacity: 1;
+}
+
+/* 参与浮层 · 顶部小标原来是粉底 */
+.join-kicker {
+  background: transparent !important;
+  border-color: var(--m-hair-2) !important;
+  color: var(--m-ink-3) !important;
+}
+
+/* 参与浮层 · 场景卡：原来是 999px 胶囊 + 彩色描边 */
+.join-scene {
+  border: 1px solid var(--m-hair) !important;
+  border-radius: 14px !important;
+  background: var(--m-card) !important;
+}
+
+.join-scene.is-selected {
+  border-color: var(--m-ink) !important;
+  background: var(--m-card) !important;
+  box-shadow: none !important;
+}
+
+.join-scene.is-selected .join-scene-name {
+  color: var(--m-ink) !important;
+}
+
+.join-scene-dot {
+  background: var(--m-ink) !important;
+  box-shadow: none !important;
+  opacity: 0.45;
+}
+
+.join-scene.is-selected .join-scene-dot {
+  opacity: 1;
+}
+
+.join-scene-meta {
+  color: var(--m-ink-3) !important;
+}
+
+.join-scene-tag {
+  background: var(--m-paper) !important;
+  color: var(--m-ink-3) !important;
+  border-radius: 4px !important;
+}
+
+.join-scene.is-selected .join-scene-tag {
+  background: var(--m-ink) !important;
+  color: #fff !important;
+}
+
+/* AR 取景框：四角括线和点位圆点原本是青色 */
+.ar-frame {
+  border-color: var(--m-hair-2) !important;
+}
+
+.ar-frame::before,
+.ar-frame::after {
+  border-color: var(--m-ink) !important;
+  opacity: 0.75;
+}
+
+.ar-marker {
+  border-color: var(--m-hair-2) !important;
+  background: var(--m-card) !important;
+  color: var(--m-ink) !important;
+}
+
+.ar-marker::before {
+  background: var(--m-ink) !important;
+  box-shadow: none !important;
+}
+
+.ar-marker.is-scanning {
+  border-color: var(--m-ink) !important;
+  color: var(--m-ink) !important;
+  box-shadow: none !important;
+}
+
+.ar-marker.is-scanning::before {
+  background: var(--m-ink) !important;
+}
+
+/* 语音球外圈脉冲：原来两圈青色光晕，改成细线 */
+.voice-orb::before,
+.voice-orb::after {
+  border-color: var(--m-hair-2) !important;
+}
+
+/* 录音态的橙色渐变球改黑 */
+.voice.is-recording .voice-orb {
+  background: var(--m-ink) !important;
+  border-color: var(--m-ink) !important;
+  color: #fff !important;
+}
+
+.voice.is-recording .voice-orb .ic {
+  color: #fff !important;
+  stroke: #fff !important;
+}
+
+.voice.is-recording .voice-hold {
+  background: var(--m-ink) !important;
+}
+
+/* ══ 第三轮收口：按 _color_audit.mjs 的全量彩点清单逐条按死 ══════════ */
+
+/* 浮层外壳/表头原来带蓝紫细边（rgba(120,180,230) 一族） */
+.models-panel,
+.voice-panel,
+.ar-panel,
+.quiz-panel,
+.sheet-panel,
+.join-panel {
+  border-color: var(--m-hair-2) !important;
+}
+
+.voice-panel > .ov-head,
+.ar-panel > .ov-head,
+.quiz-panel > .ov-head,
+.join-panel > .join-head {
+  border-bottom: 1px solid var(--m-hair) !important;
+}
+
+/* 参与浮层内部的分节虚线原来是粉色 */
+.join-sec {
+  border-bottom: 1px dashed var(--m-hair) !important;
+}
+
+/* 应用链路（Tab 内与浮层内两处）：编号方块原本青底，列表项淡蓝细边 */
+.chain-list-item {
+  border-color: var(--m-hair) !important;
+}
+
+.chain-list-idx {
+  background: var(--m-paper) !important;
+  border-color: var(--m-hair-2) !important;
+  color: var(--m-ink-3) !important;
+  font-family: var(--m-mono);
+}
+
+.chain-list-title,
+.chain-list-name {
+  color: var(--m-ink) !important;
+}
+
+.chain-list-desc {
+  color: var(--m-ink-3) !important;
+}
+
+/* 预警详情里的四段链路条原本是青色 */
+.chain-step > i {
+  background: var(--m-ink) !important;
+  box-shadow: none !important;
+  opacity: 0.85;
+}
+
+.chain-step[data-state="done"] > i {
+  opacity: 1;
+}
+
+/* AR 取景框在纯黑底上，用白括线才有取景感 */
+.ar-frame::before,
+.ar-frame::after {
+  border-color: rgba(255, 255, 255, 0.55) !important;
+}
+
+/* 关闭键的焦点环在展台上没必要，横竖已经有一圈边框 */
+.icon-btn:focus-visible,
+.btn-close:focus-visible {
+  outline: none !important;
+}
+
+/* 未读角标：卡片右上角那个点原本靠一圈「挖底色」阴影贴在边框上，
+   全局抹掉 box-shadow 后变成孤零零一颗飘着的黑点，这里把挖底色补回来 */
+.card-unread {
+  background: var(--m-ink) !important;
+  box-shadow: 0 0 0 3px var(--m-paper) !important;
+}
+
+/* 参与页四宫格右下角那个绝对定位的小箭头会和副标题撞在一起，
+   卡片本身已经是可点的，去掉更干净 */
+.entry-arrow {
+  display: none !important;
+}
+
+.entry-copy {
+  padding-right: 0 !important;
+}
+
+/* 顶栏 AEGIS 后面那个未读数字，别紧贴着字距拉开的标题 */
+.brand-title .unread-badge {
+  margin-left: 6px;
+  vertical-align: 3px;
+  /* .brand-title 上的 -webkit-text-fill-color 会一路继承，把白字染成墨黑 */
+  -webkit-text-fill-color: #fff !important;
+}

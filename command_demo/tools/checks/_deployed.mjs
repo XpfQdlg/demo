@@ -1,0 +1,14 @@
+import puppeteer from "puppeteer-core";
+import fs from "node:fs";
+const EDGE = ["C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe"].find((p)=>fs.existsSync(p));
+const b = await puppeteer.launch({executablePath:EDGE,headless:"new",args:["--enable-unsafe-swiftshader","--use-angle=swiftshader","--hide-scrollbars","--window-size=1600,900"]});
+const p = await b.newPage();
+const errs=[]; p.on("pageerror",e=>errs.push("pageerror: "+e.message)); p.on("console",m=>{if(m.type()==="error") errs.push("console: "+m.text());}); p.on("requestfailed",r=>errs.push("failed: "+r.url()+" "+r.failure()?.errorText));
+await p.setViewport({width:1600,height:900});
+const r = await p.goto("https://blog.srlove.top/aegis/",{waitUntil:"domcontentloaded",timeout:60000});
+console.log("status", r?.status());
+await new Promise(r=>setTimeout(r,22000));
+await p.screenshot({path:"shots/deployed.png"});
+console.log(await p.evaluate(()=>({cards:document.querySelectorAll(".dk-card").length, body:document.body.className, qr:document.querySelector("#joinQR svg")?true:false, title:document.title})));
+console.log("errors", errs.slice(0,8));
+await b.close();

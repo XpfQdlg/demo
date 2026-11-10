@@ -33,7 +33,12 @@ const GradeShader = {
     tDiffuse: { value: null },
     u_time: { value: 0 },
     u_vignette: { value: 0.35 },
-    u_grain: { value: 0.022 },
+    /* 颗粒默认关掉。原来这里是 0.022，噪声每帧都用 u_time 重算，
+       整幅画面因此一直在 ±2% 的随机抖动里重画，看起来就是「沙沙地闪」，
+       尤其在大屏上盯久了很明显。想要胶片颗粒的话把这里调回 0.02 左右，
+       但记得把下面 fragmentShader 里的 u_time 换成固定值，
+       否则又会变成逐帧噪声。 */
+    u_grain: { value: 0 },
     u_chroma: { value: 0.0012 },
   },
   vertexShader: `
@@ -268,17 +273,19 @@ export class Cinematic {
    * 平行光本身方向处处一致，但阴影相机有范围限制：
    * 场景不在原点时，阴影会整个丢失，画面上就是「有光没影」。
    */
-  focus_sun(center, radius = 130, azimuth = 2.3) {
+  focus_sun(center, radius = 130, azimuth = 2.3, elevation = 0.7) {
     const c = new THREE.Vector3(center[0] || 0, 0, center[1] || center[2] || 0);
     this.sun.target.position.copy(c);
     this.sun.target.updateMatrixWorld();
 
     /* 太阳方位跟着相机走：让朝向镜头的那两面墙受光。
-       固定方位时，换一个机位就会整片背光，看着发闷。 */
+       固定方位时，换一个机位就会整片背光，看着发闷。
+       仰角也一起给：夜里把月亮压低，光擦着屋顶走，
+       地面不会整片发白，立面和长影才是重点。 */
     const dist = 160;
     this.sun.position.set(
       c.x + Math.cos(azimuth) * dist,
-      135,
+      8 + Math.tan(elevation) * dist,
       c.z + Math.sin(azimuth) * dist
     );
 
@@ -296,6 +303,214 @@ export class Cinematic {
   /** 雾：线性雾按距离淡出，颜色跟着天空走，远处不会被切出一条硬边 */
   set_fog(color, near, far) {
     this.scene.fog = new THREE.Fog(color, near, far);
+  }
+
+  /* ── 夜景：数字孪生沙盘 ─────────────────────────────────────────────
+     展台大屏看的是「城市在夜里醒来」：天是深的，楼是暗的，
+     窗是亮的，路是暖的。低模在这种光线下会被读成数据孪生，
+     而不是「没做完的白色方块」。
+     所有参数都留了口子，四个场景各自调，不写死一套。 */
+  set_night({
+    exposure = 1.0,
+    sun = 2.6,
+    sunColor = 0x9fb9ff,
+    hemi = 0.45,
+    hemiSky = 0x2b4668,
+    hemiGround = 0x070a0f,
+    bloom = 0.8,
+    threshold = 0.55,
+    horizon = 0x2a3648,
+    zenith = 0x03060d,
+    fog = 0x0a1220,
+    fogNear = 220,
+    fogFar = 1100,
+    stars = true,
+    moon = true,
+    env = 0.5,
+  } = {}) {
+    this.night = true;
+    this.renderer.toneMappingExposure = exposure;
+
+    /* 月光：冷、低、仍要投影。阴影在夜里是「楼与楼之间」的层次 */
+    this.sun.color.set(sunColor);
+    this.sun.intensity = sun;
+    this.sun.castShadow = true;
+
+    this.hemi.color.set(hemiSky);
+    this.hemi.groundColor.set(hemiGround);
+    this.hemi.intensity = hemi;
+
+    this.bloom.strength = bloom;
+    this.bloom.radius = 0.7;
+    this.bloom.threshold = threshold;
+    this.grade.uniforms.u_vignette.value = 0.62;
+    this.grade.uniforms.u_chroma.value = 0.0016;
+
+    this.set_sky(horizon, zenith);
+    this.set_fog(fog, fogNear, fogFar);
+
+    /* 夜景环境贴图：用同一套天光渐变做 PMREM，
+       窗玻璃反射的是夜空而不是白天的蓝天，反光才不会穿帮。 */
+    this._night_env(env);
+    this._stars(stars);
+    if (moon) this._moon();
+  }
+
+  /* ── 摄影棚：建筑沙盘 ───────────────────────────────────────────────
+     把低模当成一件「建筑模型」来打光：米白的墙、鼠尾草绿的地、
+     暖灰的路、柔而长的影子。低多边形在这种光下是风格，不是缺陷。 */
+  set_studio({
+    exposure = 1.02,
+    sun = 3.2,
+    sunColor = 0xfff4e2,
+    hemi = 1.0,
+    hemiSky = 0xe6eef6,
+    hemiGround = 0xcfc5b0,
+    bloom = 0.06,
+    threshold = 0.95,
+    horizon = 0xefe9da,
+    zenith = 0xa9c6d8,
+    fog = 0xe6e0d1,
+    fogNear = 900,
+    fogFar = 2800,
+    env = 0.9,
+  } = {}) {
+    this.night = false;
+    this.renderer.toneMappingExposure = exposure;
+    this.sun.color.set(sunColor);
+    this.sun.intensity = sun;
+    this.sun.castShadow = true;
+    /* 几百米的地面上，0.06 的法线偏移会出条纹状自阴影（shadow acne） */
+    this.sun.shadow.normalBias = 3.0;
+    this.sun.shadow.bias = -0.0001;
+    this.hemi.color.set(hemiSky);
+    this.hemi.groundColor.set(hemiGround);
+    this.hemi.intensity = hemi;
+    this.bloom.strength = bloom;
+    this.bloom.radius = 0.5;
+    this.bloom.threshold = threshold;
+    this.grade.uniforms.u_vignette.value = 0.18;
+    this.grade.uniforms.u_chroma.value = 0.0;
+
+    this.set_sky(horizon, zenith);
+    this.set_fog(fog, fogNear, fogFar);
+    if (this.starMesh) this.starMesh.visible = false;
+    if (this.moonMesh) this.moonMesh.visible = false;
+
+    const cv = document.createElement("canvas");
+    cv.width = 256;
+    cv.height = 128;
+    const c = cv.getContext("2d");
+    const g = c.createLinearGradient(0, 0, 0, 128);
+    g.addColorStop(0.0, "#a9c6d8");
+    g.addColorStop(0.5, "#efe9da");
+    g.addColorStop(1.0, "#b9b3a4");
+    c.fillStyle = g;
+    c.fillRect(0, 0, 256, 128);
+    const tex = new THREE.CanvasTexture(cv);
+    tex.mapping = THREE.EquirectangularReflectionMapping;
+    tex.colorSpace = THREE.SRGBColorSpace;
+    const rt = this.pmrem.fromEquirectangular(tex);
+    this.scene.environment = rt.texture;
+    this.scene.environmentIntensity = env;
+  }
+
+  _night_env(intensity = 0.35) {
+    const cv = document.createElement("canvas");
+    cv.width = 256;
+    cv.height = 128;
+    const c = cv.getContext("2d");
+    const g = c.createLinearGradient(0, 0, 0, 128);
+    g.addColorStop(0.0, "#02040a");
+    g.addColorStop(0.46, "#0a1524");
+    g.addColorStop(0.52, "#28394f");
+    g.addColorStop(0.56, "#1a2432");
+    g.addColorStop(1.0, "#070a0e");
+    c.fillStyle = g;
+    c.fillRect(0, 0, 256, 128);
+
+    const tex = new THREE.CanvasTexture(cv);
+    tex.mapping = THREE.EquirectangularReflectionMapping;
+    tex.colorSpace = THREE.SRGBColorSpace;
+    const rt = this.pmrem.fromEquirectangular(tex);
+    this.scene.environment = rt.texture;
+    this.scene.environmentIntensity = intensity;
+  }
+
+  _stars(on = true) {
+    if (this.starMesh) this.starMesh.visible = on;
+    if (!on || this.starMesh) return;
+
+    const N = 1400;
+    const pos = new Float32Array(N * 3);
+    const seed = (i) => {
+      const s = Math.sin(i * 127.1 + 311.7) * 43758.5453;
+      return s - Math.floor(s);
+    };
+    for (let i = 0; i < N; i++) {
+      /* 只撒在地平线以上，仰角 4°~88° */
+      const az = seed(i) * Math.PI * 2;
+      const el = 0.07 + seed(i + 0.37) * 1.47;
+      const r = 760 + seed(i + 0.71) * 90;
+      pos[i * 3] = Math.cos(el) * Math.cos(az) * r;
+      pos[i * 3 + 1] = Math.sin(el) * r;
+      pos[i * 3 + 2] = Math.cos(el) * Math.sin(az) * r;
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+    const mat = new THREE.PointsMaterial({
+      color: 0xcfe0ff,
+      size: 1.35,
+      sizeAttenuation: false,
+      transparent: true,
+      opacity: 0.75,
+      depthWrite: false,
+      fog: false,
+      blending: THREE.AdditiveBlending,
+    });
+    this.starMesh = new THREE.Points(geo, mat);
+    this.starMesh.frustumCulled = false;
+    this.starMesh.renderOrder = 1;
+    this.scene.add(this.starMesh);
+  }
+
+  _moon() {
+    if (this.moonMesh) {
+      this.moonMesh.visible = true;
+      return;
+    }
+    const cv = document.createElement("canvas");
+    cv.width = cv.height = 256;
+    const c = cv.getContext("2d");
+    const g = c.createRadialGradient(128, 128, 8, 128, 128, 128);
+    g.addColorStop(0.0, "rgba(255,255,255,1)");
+    g.addColorStop(0.16, "rgba(240,246,255,0.98)");
+    g.addColorStop(0.22, "rgba(190,214,255,0.55)");
+    g.addColorStop(0.55, "rgba(140,180,255,0.10)");
+    g.addColorStop(1.0, "rgba(120,160,255,0)");
+    c.fillStyle = g;
+    c.fillRect(0, 0, 256, 256);
+    const tex = new THREE.CanvasTexture(cv);
+    tex.colorSpace = THREE.SRGBColorSpace;
+
+    const mat = new THREE.SpriteMaterial({
+      map: tex,
+      transparent: true,
+      depthWrite: false,
+      /* 月亮在八百米外，楼会挡住它——关掉深度测试就会浮在楼前面 */
+      depthTest: true,
+      fog: false,
+      blending: THREE.AdditiveBlending,
+    });
+    const sp = new THREE.Sprite(mat);
+    /* 放在画面左侧的天空里，不和主光同一条轴线 */
+    const az = 2.75;
+    const el = 0.34;
+    sp.position.set(Math.cos(el) * Math.cos(az) * 800, Math.sin(el) * 800, Math.cos(el) * Math.sin(az) * 800);
+    sp.scale.setScalar(34);
+    sp.renderOrder = 2;
+    this.moonMesh = sp;
+    this.scene.add(sp);
   }
 
   /* ── 相机动向 ─────────────────────────────────────────────────────── */
@@ -402,7 +617,7 @@ export class Cinematic {
 
     this.quality = level;
     this.renderer.setPixelRatio(Math.min(devicePixelRatio, P.pixelRatio));
-    this.gtao.enabled = P.gtao;
+    this.gtao.enabled = P.gtao && this.night !== false;
     this.bloom.enabled = P.bloom;
     this.smaa.enabled = P.smaa;
 

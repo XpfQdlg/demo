@@ -60,7 +60,10 @@ function load_one(slug, channel, { srgb = false } = {}) {
       (t) => {
         t.wrapS = t.wrapT = THREE.RepeatWrapping;
         t.repeat.set(1, 1);
-        t.anisotropy = 8;
+        /* 拉满各向异性：远景路面/草地是大角度斜视贴图，
+           8 倍在 1600 宽的屏幕上仍然会闪出摩尔纹，16 倍明显稳一些。
+           超出硬件上限时 three 会自己截断，写大不吃亏。 */
+        t.anisotropy = 16;
         t.colorSpace = srgb ? THREE.SRGBColorSpace : THREE.NoColorSpace;
         t.needsUpdate = true;
         cache.set(key, t);
